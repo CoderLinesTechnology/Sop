@@ -26,7 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SecurityHeaders::class);
 
         // Webhooks are authenticated by provider signatures instead of CSRF tokens.
-        $middleware->validateCsrfTokens(except: ['webhooks/*']);
+        $middleware->validateCsrfTokens(except: ['webhooks/*', 'beacon']);
 
         $middleware->alias([
             'order.access' => AuthorizeOrderAccess::class,

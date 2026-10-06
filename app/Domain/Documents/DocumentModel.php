@@ -78,6 +78,42 @@ final class DocumentModel
         return array_column(array_filter($this->blocks, fn ($b) => $b['type'] === 'paragraph'), 'text');
     }
 
+    /**
+     * Body blocks grouped under their headings (e.g. one group per UCAS
+     * question). Blocks before the first heading form a group with a null
+     * heading.
+     *
+     * @return list<array{heading:?string, text:string}>
+     */
+    public function sections(): array
+    {
+        $sections = [];
+        $current = null;
+        foreach ($this->blocks as $block) {
+            if ($block['type'] === 'heading') {
+                if ($current !== null) {
+                    $sections[] = $current;
+                }
+                $current = ['heading' => $block['text'], 'texts' => []];
+
+                continue;
+            }
+            $current ??= ['heading' => null, 'texts' => []];
+            $current['texts'][] = $block['text'];
+        }
+        if ($current !== null) {
+            $sections[] = $current;
+        }
+
+        return array_map(fn (array $s) => ['heading' => $s['heading'], 'text' => implode("\n\n", $s['texts'])], $sections);
+    }
+
+    /** Body text without headings: what applicants type into a portal whose form already shows the questions. */
+    public function answerText(): string
+    {
+        return implode("\n\n", array_column(array_filter($this->blocks, fn ($b) => $b['type'] !== 'heading'), 'text'));
+    }
+
     public function toArray(): array
     {
         return [

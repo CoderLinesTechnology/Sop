@@ -1,9 +1,243 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/source-serif-4';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+@source '../views/**/*.blade.php';
+@source '../../app/View/**/*.php';
+@source inline('lg:grid-cols-3 lg:grid-cols-4 lg:grid-cols-5 lg:col-span-2 lg:col-span-3 lg:col-span-6');
 
+/*
+ * Statementra design tokens. Clean, premium, typography-led:
+ * a transitional serif for display text, Inter for interface text,
+ * deep green as the single brand colour on warm off-white.
+ */
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-serif: 'Source Serif 4 Variable', Georgia, 'Times New Roman', serif;
+
+    --color-brand-50: #eef5f2;
+    --color-brand-100: #dcebe5;
+    --color-brand-200: #b9d6cb;
+    --color-brand-300: #8ebaa9;
+    --color-brand-500: #2f7364;
+    --color-brand-600: #1c5a51;
+    --color-brand-700: #12403a;
+    --color-brand-800: #0e332e;
+    --color-brand-900: #0a2622;
+
+    --color-ink: #17302b;
+    --color-body: #3e4e4a;
+    --color-muted: #66756f;
+    --color-line: #e6e1d8;
+    --color-line-strong: #d3ccbf;
+    --color-cream: #faf8f4;
+    --color-sand: #f3efe8;
+
+    --color-mint: #dff1e6;
+    --color-mint-ink: #1e6a46;
+    --color-coral: #e2574f;
+
+    --color-tint-green: #e3f0ea;
+    --color-tint-green-ink: #1f5b4b;
+    --color-tint-blue: #e5eef8;
+    --color-tint-blue-ink: #2f5f8c;
+    --color-tint-purple: #efe9f7;
+    --color-tint-purple-ink: #5d4c8c;
+    --color-tint-yellow: #fbf2dc;
+    --color-tint-yellow-ink: #8a6a1e;
+    --color-tint-teal: #ddf0ee;
+    --color-tint-teal-ink: #1f6966;
+    --color-tint-rose: #fbe8e7;
+    --color-tint-rose-ink: #9a3b37;
+
+    --shadow-card: 0 1px 2px rgb(23 48 43 / 0.04), 0 10px 30px -18px rgb(23 48 43 / 0.18);
+    --shadow-lift: 0 2px 4px rgb(23 48 43 / 0.05), 0 18px 40px -20px rgb(23 48 43 / 0.28);
+
+    --animate-fade-in: fade-in 0.25s ease-out both;
+
+    @keyframes fade-in {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: none; }
+    }
+}
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+        text-rendering: optimizeLegibility;
+        scroll-padding-top: 5.5rem;
+    }
+
+    body {
+        @apply bg-cream font-sans text-body antialiased;
+        font-feature-settings: 'cv11', 'ss01';
+    }
+
+    h1, h2, h3, h4 {
+        @apply font-serif font-normal text-ink;
+        letter-spacing: -0.015em;
+        text-wrap: balance;
+    }
+
+    p {
+        text-wrap: pretty;
+    }
+
+    ::selection {
+        background: var(--color-brand-100);
+        color: var(--color-ink);
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-brand-700);
+        outline-offset: 2px;
+        border-radius: 4px;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    summary::-webkit-details-marker {
+        display: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+}
+
+@layer components {
+    .container-site {
+        @apply mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8;
+    }
+
+    .eyebrow {
+        @apply text-[0.72rem] font-semibold tracking-[0.18em] text-brand-700 uppercase;
+    }
+
+    .display-1 {
+        @apply text-[2.35rem] leading-[1.08] sm:text-5xl lg:text-[3.6rem];
+    }
+
+    .display-2 {
+        @apply text-[1.9rem] leading-[1.15] sm:text-[2.4rem];
+    }
+
+    .lead {
+        @apply text-base leading-relaxed text-body sm:text-[1.075rem];
+    }
+
+    .btn,
+    .btn-primary,
+    .btn-outline,
+    .btn-white,
+    .btn-ghost {
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-5 py-2.5 text-[0.94rem] font-semibold transition duration-150 select-none disabled:cursor-not-allowed disabled:opacity-60;
+    }
+
+    .btn-primary {
+        @apply bg-brand-700 text-white shadow-sm hover:bg-brand-800 active:bg-brand-900;
+    }
+
+    .btn-outline {
+        @apply border border-brand-700 bg-white/70 text-brand-700 hover:bg-brand-50;
+    }
+
+    .btn-white {
+        @apply bg-white text-brand-800 hover:bg-brand-50;
+    }
+
+    .btn-ghost {
+        @apply px-3 text-brand-700 hover:bg-brand-50;
+    }
+
+    .link {
+        @apply font-semibold text-brand-700 underline-offset-4 hover:underline;
+    }
+
+    .card {
+        @apply rounded-[10px] border border-line bg-white;
+    }
+
+    .pill-save {
+        @apply inline-flex items-center rounded-full bg-mint px-2.5 py-0.5 text-xs font-semibold text-mint-ink;
+    }
+
+    .pill-off {
+        @apply inline-flex items-center rounded-[4px] bg-coral px-2 py-0.5 text-[0.7rem] font-bold tracking-wide text-white uppercase;
+    }
+
+    .field-label {
+        @apply mb-1.5 block text-sm font-medium text-ink;
+    }
+
+    .field-input {
+        @apply block w-full rounded-md border border-line-strong bg-white px-3.5 py-2.5 text-[0.95rem] text-ink placeholder:text-muted/70 transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100 focus:outline-none aria-[invalid=true]:border-coral;
+    }
+
+    .field-help {
+        @apply mt-1.5 text-xs leading-relaxed text-muted;
+    }
+
+    .field-error {
+        @apply mt-1.5 text-sm font-medium text-tint-rose-ink;
+    }
+
+    .tag-optional {
+        @apply ml-1 text-xs font-normal text-muted;
+    }
+
+    .prose-st {
+        @apply text-[1.02rem] leading-[1.75] text-body;
+    }
+
+    .prose-st > * + * {
+        @apply mt-5;
+    }
+
+    .prose-st h2 {
+        @apply mt-10 text-2xl;
+    }
+
+    .prose-st h3 {
+        @apply mt-8 text-xl;
+    }
+
+    .prose-st a {
+        @apply font-medium text-brand-700 underline underline-offset-4;
+    }
+
+    .prose-st ul {
+        @apply list-disc space-y-2 pl-6;
+    }
+
+    .prose-st ol {
+        @apply list-decimal space-y-2 pl-6;
+    }
+
+    .prose-st strong {
+        @apply font-semibold text-ink;
+    }
+
+    .prose-st blockquote {
+        @apply border-l-2 border-brand-300 pl-5 font-serif text-lg text-ink italic;
+    }
+
+    .prose-st table {
+        @apply w-full border-collapse text-sm;
+    }
+
+    .prose-st th,
+    .prose-st td {
+        @apply border-b border-line px-3 py-2 text-left align-top;
+    }
+
+    .prose-st code {
+        @apply rounded bg-sand px-1.5 py-0.5 text-[0.9em];
+    }
 }

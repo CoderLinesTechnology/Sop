@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Catalogue\Catalogue;
 use App\Domain\Payments\Paystack\MockPaystackGateway;
 use App\Domain\Payments\Paystack\PaystackClient;
 use App\Domain\Payments\Paystack\PaystackGateway;
@@ -12,6 +13,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -50,6 +52,17 @@ class AppServiceProvider extends ServiceProvider
         Password::defaults(fn () => Password::min(12)->letters()->mixedCase()->numbers()->symbols());
 
         $this->configureRateLimiting();
+
+        View::composer('components.layouts.site', \App\View\Composers\SiteLayoutComposer::class);
+
+        // Admin edits to public content are visible immediately.
+        foreach ([
+            \App\Models\Service::class, \App\Models\ServiceField::class, \App\Models\Page::class, \App\Models\Faq::class,
+            \App\Models\Article::class, \App\Models\ArticleCategory::class, \App\Models\Testimonial::class, \App\Models\Promotion::class,
+        ] as $model) {
+            $model::saved(fn () => Catalogue::flush());
+            $model::deleted(fn () => Catalogue::flush());
+        }
     }
 
     private function configureRateLimiting(): void

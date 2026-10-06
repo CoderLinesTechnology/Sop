@@ -29,6 +29,8 @@ final class ResolvedRequirements
      * @param  list<array{name:string,url:?string,type:string,checked_at:?string}>  $sources
      * @param  list<array{field:string,candidates:array,chosen:mixed,reason:string}>  $conflicts
      * @param  list<int>  $appliedRuleIds
+     * @param  bool  $limitsIncludeHeadings  false when the platform shows the questions itself (UCAS):
+     *                                        headings are then not part of the counted text
      */
     public function __construct(
         public ?int $minWords = null,
@@ -54,7 +56,24 @@ final class ResolvedRequirements
         public array $sources = [],
         public array $conflicts = [],
         public array $appliedRuleIds = [],
+        public bool $limitsIncludeHeadings = true,
     ) {}
+
+    /** The text that length limits apply to (the body; without headings when the platform supplies the questions). */
+    public function countableText(DocumentModel $model): string
+    {
+        return $this->limitsIncludeHeadings ? $model->bodyText() : $model->answerText();
+    }
+
+    public function countWords(DocumentModel $model): int
+    {
+        return WordCounter::words($this->countableText($model));
+    }
+
+    public function countCharacters(DocumentModel $model, bool $withSpaces = true): int
+    {
+        return WordCounter::characters($this->countableText($model), $withSpaces);
+    }
 
     public function languageName(): string
     {
@@ -75,6 +94,10 @@ final class ResolvedRequirements
         }
         if ($this->maxPages) {
             $parts[] = "at most {$this->maxPages} page(s)";
+        }
+
+        if ($parts && ! $this->limitsIncludeHeadings) {
+            $parts[] = 'the questions/headings are not counted';
         }
 
         return $parts ? implode('; ', $parts) : "no official limit found (target about {$this->targetWords} words)";
