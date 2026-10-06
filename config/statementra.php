@@ -1,5 +1,8 @@
 <?php
 
+use App\Domain\Ai\Tasks\AdvanceDuePipelines;
+use App\Domain\Ai\Tasks\NotifyDelayedOrders;
+use App\Domain\Ai\Tasks\RecoverStalledPipelines;
 use App\Domain\Email\Tasks\SendPendingEmails;
 use App\Domain\Files\Tasks\ExtractPendingUploads;
 use App\Domain\Maintenance\ProcessInformationRequests;
@@ -130,6 +133,9 @@ return [
         'tasks' => [
             'payments.process-events' => [60, ProcessPendingPaymentEvents::class],
             'orders.start-pending' => [120, StartPendingFulfilment::class],
+            'ai.advance-due' => [60, AdvanceDuePipelines::class],
+            'ai.recover-stalled' => [300, RecoverStalledPipelines::class],
+            'ai.notify-delayed' => [300, NotifyDelayedOrders::class],
             'emails.send-pending' => [60, SendPendingEmails::class],
             'uploads.extract-pending' => [120, ExtractPendingUploads::class],
             'payments.reconcile' => [600, ReconcilePayments::class],

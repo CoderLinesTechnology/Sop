@@ -26,7 +26,9 @@ use Illuminate\Support\Str;
 class AiJob extends Model
 {
     public const KIND_ORDER = 'order_pipeline';
+
     public const KIND_REVISION = 'revision';
+
     public const KIND_REGENERATION = 'regeneration';
 
     protected $attributes = [

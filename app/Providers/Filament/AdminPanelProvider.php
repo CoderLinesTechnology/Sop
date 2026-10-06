@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Dashboard;
+use App\Filament\Support\InitialsAvatarProvider;
 use App\Http\Middleware\AdminSessionTimeout;
 use App\Http\Middleware\RestrictAdminIps;
 use App\Http\Middleware\RunHeartbeat;
@@ -47,8 +48,13 @@ class AdminPanelProvider extends PanelProvider
             )
             ->brandName('Statementra Admin')
             ->favicon(asset('favicon.svg'))
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
             ->colors([
-                'primary' => Color::hex('#12403A'),
+                // The site's brand greens, shade for shade (Color::hex() would derive lighter teals).
+                'primary' => array_map(fn (string $hex) => Color::convertToOklch($hex), [
+                    50 => '#eef5f2', 100 => '#dcebe5', 200 => '#b9d6cb', 300 => '#8ebaa9', 400 => '#5b9584',
+                    500 => '#2f7364', 600 => '#1c5a51', 700 => '#12403a', 800 => '#0e332e', 900 => '#0a2622', 950 => '#06171a',
+                ]),
                 'gray' => Color::Stone,
                 'info' => Color::Sky,
                 'success' => Color::Emerald,

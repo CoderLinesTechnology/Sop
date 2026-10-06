@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Delivery\DocumentDelivery;
+use App\Domain\Email\EmailSender;
 use App\Domain\Files\FileVault;
 use App\Enums\EmailStatus;
 use App\Enums\OrderStatus;
@@ -87,7 +88,7 @@ it('marks the delivery failed after the last attempt, and resends on request', f
 
     $email = app(DocumentDelivery::class)->deliver($order, $version);
     $email->refresh()->forceFill(['attempts' => 4, 'next_attempt_at' => null])->save();
-    app(App\Domain\Email\EmailSender::class)->send($email->id);
+    app(EmailSender::class)->send($email->id);
 
     expect($email->refresh()->status)->toBe(EmailStatus::Failed)
         ->and($order->refresh()->status)->toBe(OrderStatus::DeliveryFailed);

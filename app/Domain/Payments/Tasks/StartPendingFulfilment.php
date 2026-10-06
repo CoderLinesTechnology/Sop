@@ -2,6 +2,7 @@
 
 namespace App\Domain\Payments\Tasks;
 
+use App\Domain\Ai\Pipeline\PipelineTrigger;
 use App\Domain\Ai\PipelineDispatcher;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
@@ -15,7 +16,8 @@ use Throwable;
 /**
  * Heartbeat task and safety net: paid work whose start was missed (the request
  * that confirmed the payment died, or starting failed) is started here.
- * Starting is idempotent (FulfillmentGuard and the AI job dedupe key).
+ * Starting is idempotent (FulfillmentGuard and the AI job dedupe key), and
+ * the first stages run in a fresh request (loopback) so the heartbeat stays short.
  */
 class StartPendingFulfilment
 {
@@ -32,7 +34,9 @@ class StartPendingFulfilment
             ->orderBy('id')
             ->limit(5)
             ->get()
-            ->each(fn (Order $order) => $this->attempt('order '.$order->reference, fn () => $this->dispatcher->startForOrder($order)));
+            ->each(fn (Order $order) => $this->attempt('order '.$order->reference, fn () => PipelineTrigger::viaLoopback(
+                fn () => $this->dispatcher->startForOrder($order),
+            )));
 
         Revision::query()
             ->where('status', RevisionStatus::Processing->value)
@@ -42,7 +46,9 @@ class StartPendingFulfilment
             ->orderBy('id')
             ->limit(5)
             ->get()
-            ->each(fn (Revision $revision) => $this->attempt('revision '.$revision->uuid, fn () => $this->dispatcher->startRevision($revision)));
+            ->each(fn (Revision $revision) => $this->attempt('revision '.$revision->uuid, fn () => PipelineTrigger::viaLoopback(
+                fn () => $this->dispatcher->startRevision($revision),
+            )));
     }
 
     private function attempt(string $what, \Closure $start): void

@@ -29,7 +29,10 @@ final class FactChecker
     public const UNKNOWN_PROGRAMME = 'unknown_programme';
 
     /** Problem types sanitize() may resolve by removing the sentence. */
-    public const REMOVABLE = [self::UNSUPPORTED_NUMBER, self::URL_OR_CITATION, self::PLACEHOLDER];
+    /** An email address or international phone number: contact details never belong in the document. */
+    public const CONTACT_DETAILS = 'contact_details';
+
+    public const REMOVABLE = [self::UNSUPPORTED_NUMBER, self::URL_OR_CITATION, self::PLACEHOLDER, self::CONTACT_DETAILS];
 
     private const INSTITUTION_KEYWORDS = 'University|College|Institute|Polytechnic|Academy|Conservatoire|Conservatory|School';
 
@@ -60,6 +63,10 @@ final class FactChecker
 
                 if (! $citationsAllowed && preg_match('~https?://|\bwww\.|\bdoi:|\[\d{1,3}\]|\((?:[A-Z][\p{L}-]+(?: et al\.?)?(?: (?:and|&) [A-Z][\p{L}-]+)?), \d{4}\)~u', $sentence)) {
                     $issues[] = $this->issue(self::URL_OR_CITATION, $sentence, 'URLs, citations and references are not allowed in this document.');
+                }
+
+                if (preg_match('/[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,}|\+\d[\d\s().-]{7,}\d/u', $sentence)) {
+                    $issues[] = $this->issue(self::CONTACT_DETAILS, $sentence, 'Contact details (an email address or phone number) do not belong in the document.');
                 }
 
                 if (preg_match('/\[(?:your|insert|name|applicant|university|institution|programme|program|course|date|x{2,})[^\]]{0,40}\]|\{\{|\}\}|lorem ipsum|\bTBD\b|\bXXX+\b/iu', $sentence)) {

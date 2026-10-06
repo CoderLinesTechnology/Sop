@@ -78,3 +78,15 @@ it('normalises numbers consistently', function () {
         ->and(EvidenceCorpus::normalizeNumber('4.0'))->toBe('4')
         ->and(array_column(EvidenceCorpus::extractNumbers('Ranked 1st of 250 (12.5 per cent) in 2024'), 'value'))->toBe(['1', '250', '12.5', '2024']);
 });
+
+it('flags contact details copied into the document, but not year ranges', function () use ($order) {
+    $checker = new FactChecker;
+
+    $issues = $checker->check(doc('Accra, Ghana | ama.mensah@example.com.', 'Call me on +233 24 123 4567 any time.'), corpus(), $order);
+    expect(array_column($issues, 'type'))->toContain(FactChecker::CONTACT_DETAILS)
+        ->and(collect($issues)->where('type', FactChecker::CONTACT_DETAILS)->count())->toBe(2)
+        ->and(FactChecker::REMOVABLE)->toContain(FactChecker::CONTACT_DETAILS);
+
+    $clean = $checker->check(doc('I completed a BSc in Computer Science at the University of Ghana in 2023 with a GPA of 3.80.'), corpus(), $order);
+    expect(array_column($clean, 'type'))->not->toContain(FactChecker::CONTACT_DETAILS);
+});

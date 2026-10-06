@@ -70,11 +70,15 @@ final class TextExtractor
         try {
             $binary = (string) config('statementra.documents.pdftotext_binary');
             if ($binary !== '' && is_executable($binary)) {
-                $process = new Process([$binary, '-enc', 'UTF-8', '-l', '40', $temp, '-']);
-                $process->setTimeout(30);
-                $process->run();
-                if ($process->isSuccessful()) {
-                    $output = $process->getOutput();
+                $output = $this->pdftotext($binary, $temp);
+                if ($output !== null) {
+                    // Reading order handles columns well but joins every line ending in "-"
+                    // with the next line ("2019-" + "2023)" becomes "20192023)"). Raw mode
+                    // keeps those hyphens; use it to put back the ones that were real.
+                    $raw = $this->pdftotext($binary, $temp, raw: true);
+                    if ($raw !== null) {
+                        $output = self::restoreLineEndHyphens($output, $raw);
+                    }
 
                     return [str_replace("\f", "\n\n", $output), substr_count($output, "\f") ?: null];
                 }
@@ -86,6 +90,33 @@ final class TextExtractor
         } finally {
             @unlink($temp);
         }
+    }
+
+    private function pdftotext(string $binary, string $path, bool $raw = false): ?string
+    {
+        $process = new Process([$binary, ...($raw ? ['-raw'] : []), '-enc', 'UTF-8', '-l', '40', $path, '-']);
+        $process->setTimeout(30);
+        $process->run();
+
+        return $process->isSuccessful() ? $process->getOutput() : null;
+    }
+
+    /**
+     * Re-insert hyphens that pdftotext removed at line ends when they cannot
+     * have been word breaks: a digit before the hyphen ("2019-2023") or a digit
+     * or capital letter after it ("COVID-19", "Anglo-French").
+     */
+    public static function restoreLineEndHyphens(string $readingOrder, string $raw): string
+    {
+        preg_match_all('/(\S+)-\R(\S+)/u', $raw, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as [, $left, $right]) {
+            if (preg_match('/\p{N}$/u', $left) || preg_match('/^[\p{Lu}\p{N}]/u', $right)) {
+                $readingOrder = str_replace($left.$right, $left.'-'.$right, $readingOrder);
+            }
+        }
+
+        return $readingOrder;
     }
 
     public function fromDocx(string $contents): string
