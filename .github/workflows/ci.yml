@@ -93,13 +93,14 @@ jobs:
           composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress
           npm ci && npm run build
 
+      # Zipped here (not by upload-artifact) so hidden files such as public/.htaccess are kept.
       - name: Package
         run: |
           rm -rf node_modules tests .github .git .env
-          zip -qr ../statementra-release.zip . -x '*.DS_Store'
+          zip -qr "$RUNNER_TEMP/statementra-release.zip" . -x '*.DS_Store'
 
       - uses: actions/upload-artifact@v4
         with:
           name: statementra-release
-          path: ../statementra-release.zip
+          path: ${{ runner.temp }}/statementra-release.zip
           retention-days: 30
