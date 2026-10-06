@@ -13,7 +13,9 @@ return [
     |
     */
 
-    'default' => env('QUEUE_CONNECTION', 'database'),
+    // Statementra runs without a queue worker (see config/statementra.php "runtime"):
+    // anything a library queues runs inline.
+    'default' => env('QUEUE_CONNECTION', 'sync'),
 
     /*
     |--------------------------------------------------------------------------
@@ -41,17 +43,6 @@ return [
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
             'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 180),
-            'after_commit' => true,
-        ],
-
-        // Long-running AI pipeline stages (research with web search, writing).
-        // retry_after must exceed the longest stage timeout (RunPipelineStage::$timeout).
-        'database-long' => [
-            'driver' => 'database',
-            'connection' => env('DB_QUEUE_CONNECTION'),
-            'table' => env('DB_QUEUE_TABLE', 'jobs'),
-            'queue' => 'ai',
-            'retry_after' => (int) env('DB_QUEUE_LONG_RETRY_AFTER', 960),
             'after_commit' => true,
         ],
 

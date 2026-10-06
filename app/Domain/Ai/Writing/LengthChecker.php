@@ -13,8 +13,9 @@ use App\Models\DocumentTemplate;
  * section headings and per-section limits. When no hard limit exists, a soft
  * band around the target length keeps documents reasonable.
  *
- * Counting uses WordCounter / DocumentModel exactly as the portals do; the
- * page count is an estimate (the rendered PDF is checked again in file QA).
+ * Counting follows ResolvedRequirements::countWords()/countCharacters()
+ * (WordCounter rules; headings excluded when the portal shows the questions);
+ * the page count is an estimate (the rendered PDF is checked again in file QA).
  */
 final class LengthChecker
 {
@@ -31,8 +32,9 @@ final class LengthChecker
      */
     public function check(DocumentModel $document, ResolvedRequirements $requirements, ?DocumentTemplate $template, int $targetWords): array
     {
-        $words = $document->wordCount();
-        $characters = $document->characterCount(true);
+        // Counted the way the destination counts (headings excluded when the portal shows the questions).
+        $words = $requirements->countWords($document);
+        $characters = $requirements->countCharacters($document, true);
         $pages = $this->estimatePages($words, $requirements, $template);
         $violations = [];
 
@@ -85,7 +87,7 @@ final class LengthChecker
             'counts' => [
                 'words' => $words,
                 'characters' => $characters,
-                'characters_no_spaces' => $document->characterCount(false),
+                'characters_no_spaces' => $requirements->countCharacters($document, false),
                 'estimated_pages' => round($pages, 2),
             ],
             'targets' => $this->targets($requirements, $template, $targetWords, $words),

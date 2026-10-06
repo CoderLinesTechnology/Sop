@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Orders\Schemas;
 use App\Enums\DocumentKind;
 use App\Enums\PaymentStatus;
 use App\Filament\Resources\Customers\CustomerResource;
+use App\Filament\Resources\Orders\OrderInsights;
+use App\Filament\Support\Operations\AdminContext;
 use App\Filament\Support\Operations\Format;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
@@ -58,7 +60,8 @@ class OrderOverviewTab
                     ->copyable(),
                 TextEntry::make('customer_phone')
                     ->label('Phone')
-                    ->placeholder('Not provided'),
+                    ->placeholder('Not provided')
+                    ->visible(fn (Order $record): bool => AdminContext::allows('viewCustomerData', $record)),
                 TextEntry::make('account')
                     ->label('Customer account')
                     ->state(fn (Order $record): string => $record->user ? 'Account · '.$record->user->email : 'Guest checkout')
@@ -77,7 +80,8 @@ class OrderOverviewTab
                     ->tooltip(fn (Order $record): ?string => $record->user_agent)
                     ->placeholder(Format::PLACEHOLDER)
                     ->fontFamily(FontFamily::Mono)
-                    ->size(TextSize::Small),
+                    ->size(TextSize::Small)
+                    ->visible(fn (Order $record): bool => AdminContext::allows('viewCustomerData', $record)),
             ]);
     }
 
@@ -90,7 +94,11 @@ class OrderOverviewTab
                 TextEntry::make('service_name')
                     ->label('Service')
                     ->state(fn (Order $record): string => $record->serviceName())
-                    ->helperText(fn (Order $record): ?string => DocumentKind::tryFrom($record->documentKind())?->getLabel())
+                    ->helperText(function (Order $record): ?string {
+                        $kind = DocumentKind::tryFrom($record->documentKind())?->getLabel();
+
+                        return $kind !== $record->serviceName() ? $kind : null;
+                    })
                     ->weight(FontWeight::SemiBold),
                 TextEntry::make('institution')
                     ->label('Institution')
@@ -188,7 +196,7 @@ class OrderOverviewTab
                 TextEntry::make('pipeline')
                     ->label('AI pipeline')
                     ->state(function (Order $record): ?string {
-                        $job = $record->latestAiJob;
+                        $job = OrderInsights::latestJob($record);
                         if (! $job) {
                             return null;
                         }
@@ -196,7 +204,7 @@ class OrderOverviewTab
                         return $job->status->getLabel().($job->current_stage ? ' · '.$job->current_stage->getLabel() : '');
                     })
                     ->badge()
-                    ->color(fn (Order $record): string => $record->latestAiJob?->status->getColor() ?? 'gray')
+                    ->color(fn (Order $record): string => OrderInsights::latestJob($record)?->status->getColor() ?? 'gray')
                     ->placeholder('Not started'),
                 TextEntry::make('created_at')
                     ->label('Order created')

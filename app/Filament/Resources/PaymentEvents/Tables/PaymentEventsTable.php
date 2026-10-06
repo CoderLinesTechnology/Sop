@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PaymentEvents\Tables;
 
 use App\Filament\Support\Operations\Format;
+use App\Models\PaymentEvent;
 use Filament\Actions\ViewAction;
 use Filament\Support\Enums\FontFamily;
 use Filament\Support\Icons\Heroicon;
@@ -71,7 +72,7 @@ class PaymentEventsTable
                     ->options(self::STATUSES),
                 SelectFilter::make('event_type')
                     ->label('Event')
-                    ->options(fn (): array => \App\Models\PaymentEvent::query()->distinct()->orderBy('event_type')->pluck('event_type', 'event_type')->all()),
+                    ->options(fn (): array => PaymentEvent::query()->distinct()->orderBy('event_type')->pluck('event_type', 'event_type')->all()),
             ])
             ->recordActions([
                 ViewAction::make()->modalWidth('4xl'),

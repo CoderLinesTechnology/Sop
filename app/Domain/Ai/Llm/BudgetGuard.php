@@ -6,6 +6,7 @@ use App\Enums\StepStatus;
 use App\Models\AiJob;
 use App\Models\AiUsage;
 use App\Support\Settings;
+use Illuminate\Support\Carbon;
 
 /**
  * Enforces cost and activity limits before every model call:
@@ -75,7 +76,7 @@ class BudgetGuard
 
         $running = 0;
         foreach ($job->steps()->reorder()->where('status', StepStatus::Running->value)->whereNotNull('started_at')->pluck('started_at') as $startedAt) {
-            $running += max(0, now()->getTimestampMs() - \Illuminate\Support\Carbon::parse($startedAt)->getTimestampMs());
+            $running += max(0, now()->getTimestampMs() - Carbon::parse($startedAt)->getTimestampMs());
         }
 
         return ($finished + $running) / 60000;

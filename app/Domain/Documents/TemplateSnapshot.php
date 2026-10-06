@@ -64,18 +64,26 @@ final class TemplateSnapshot
 
     /**
      * @param  array{document_kind?:string, document_type?:string, institution?:?string, programme?:?string}  $context
+     * @param  bool  $preferTemplate  the template was chosen explicitly (by an administrator): its
+     *                                formatting beats country-level conventions, but not real requirements
      */
-    public static function make(DocumentTemplate $template, ResolvedRequirements $requirements, array $context = []): array
+    public static function make(DocumentTemplate $template, ResolvedRequirements $requirements, array $context = [], bool $preferTemplate = false): array
     {
         $snapshot = self::fromTemplate($template);
         $overrides = [];
         $ignored = [];
 
-        $override = function (string $field, mixed $value, string $requirement) use (&$snapshot, &$overrides): void {
-            if ($snapshot[$field] != $value) {
-                $overrides[$field] = ['template' => $snapshot[$field], 'applied' => $value, 'requirement' => $requirement];
-                $snapshot[$field] = $value;
+        $override = function (string $field, mixed $value, string $requirement) use (&$snapshot, &$overrides, &$ignored, $preferTemplate, $requirements): void {
+            if ($snapshot[$field] == $value) {
+                return;
             }
+            if ($preferTemplate && $requirements->isConvention($requirement)) {
+                $ignored[$field] = ['requested' => $value, 'reason' => 'Country convention; the explicitly chosen template keeps its own setting.'];
+
+                return;
+            }
+            $overrides[$field] = ['template' => $snapshot[$field], 'applied' => $value, 'requirement' => $requirement];
+            $snapshot[$field] = $value;
         };
 
         if ($requirements->pageSize !== null) {
@@ -122,6 +130,7 @@ final class TemplateSnapshot
 
         $snapshot['date_format'] ??= $requirements->dateFormat;
         $snapshot['language_variant'] = $requirements->languageVariant;
+        $snapshot['template_chosen'] = $preferTemplate;
         $snapshot['applied_overrides'] = $overrides;
         $snapshot['ignored_overrides'] = $ignored;
         $snapshot['context'] = array_merge($snapshot['context'], array_filter($context, fn ($v) => $v !== null && $v !== ''));
@@ -183,6 +192,7 @@ final class TemplateSnapshot
         $s['template_name'] = $snapshot['template_name'] ?? null;
         $s['template_slug'] = $snapshot['template_slug'] ?? null;
         $s['language_variant'] = LanguageVariant::normalize($snapshot['language_variant'] ?? null) ?? LanguageVariant::DEFAULT;
+        $s['template_chosen'] = (bool) ($snapshot['template_chosen'] ?? false);
         $s['applied_overrides'] = (array) ($snapshot['applied_overrides'] ?? []);
         $s['ignored_overrides'] = (array) ($snapshot['ignored_overrides'] ?? []);
         $s['context'] = (array) ($snapshot['context'] ?? []) + [

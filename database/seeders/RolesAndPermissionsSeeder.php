@@ -21,7 +21,16 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         foreach (AdminRole::cases() as $role) {
-            Role::findOrCreate($role->value, 'admin')->syncPermissions($role->permissions());
+            $existing = Role::query()->where(['name' => $role->value, 'guard_name' => 'admin'])->first();
+
+            if ($role === AdminRole::SuperAdmin) {
+                // Super administrators always hold every permission, including new ones.
+                ($existing ?? Role::create(['name' => $role->value, 'guard_name' => 'admin']))->syncPermissions(P::all());
+            } elseif (! $existing) {
+                // Defaults are applied once; later edits in Admin → Roles are kept on re-seed
+                // (the Roles page offers "Reset to defaults").
+                Role::create(['name' => $role->value, 'guard_name' => 'admin'])->syncPermissions($role->permissions());
+            }
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();

@@ -6,6 +6,7 @@ use App\Enums\AiJobStatus;
 use App\Enums\PipelineStage;
 use App\Enums\StepStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -50,6 +51,8 @@ class AiJob extends Model
             'started_at' => 'datetime',
             'heartbeat_at' => 'datetime',
             'finished_at' => 'datetime',
+            'next_run_at' => 'datetime',
+            'leased_until' => 'datetime',
             'total_cost_usd' => 'decimal:6',
             'used_fallback' => 'boolean',
         ];
@@ -105,6 +108,36 @@ class AiJob extends Model
     public function config(string $key, mixed $default = null): mixed
     {
         return data_get($this->workflow_snapshot, $key, $default);
+    }
+
+    public function isRevision(): bool
+    {
+        return $this->kind === self::KIND_REVISION;
+    }
+
+    /** A worker currently holds this job (request-driven runtime lease). */
+    public function isLeased(): bool
+    {
+        return $this->leased_until !== null && $this->leased_until->isFuture();
+    }
+
+    /** Runnable, due now and not leased: the next stage may start. */
+    public function isDue(): bool
+    {
+        return $this->status instanceof AiJobStatus
+            && $this->status->isRunnable()
+            && ($this->next_run_at === null || ! $this->next_run_at->isFuture())
+            && ! $this->isLeased();
+    }
+
+    /** Jobs whose next stage may start now (runnable, due, not leased). */
+    public function scopeDue(Builder $query): void
+    {
+        $now = now();
+
+        $query->whereIn('status', [AiJobStatus::Queued->value, AiJobStatus::Running->value])
+            ->where(fn ($q) => $q->whereNull('next_run_at')->orWhere('next_run_at', '<=', $now))
+            ->where(fn ($q) => $q->whereNull('leased_until')->orWhere('leased_until', '<', $now));
     }
 
     public function durationMinutes(): ?float

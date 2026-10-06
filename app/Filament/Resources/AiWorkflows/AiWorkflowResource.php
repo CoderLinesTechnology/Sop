@@ -13,12 +13,24 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
+/** AI workflows: stages, models, prompts, research depth, quality thresholds and limits. */
 class AiWorkflowResource extends Resource
 {
     protected static ?string $model = AiWorkflow::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCpuChip;
+
+    protected static string|UnitEnum|null $navigationGroup = 'AI';
+
+    protected static ?int $navigationSort = 20;
+
+    protected static ?string $navigationLabel = 'Workflows';
+
+    protected static ?string $modelLabel = 'AI workflow';
+
+    protected static ?string $recordTitleAttribute = 'name';
 
     public static function form(Schema $schema): Schema
     {
@@ -28,13 +40,6 @@ class AiWorkflowResource extends Resource
     public static function table(Table $table): Table
     {
         return AiWorkflowsTable::configure($table);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
     }
 
     public static function getPages(): array

@@ -37,7 +37,7 @@ class DocumentQa
     /** Leftovers that must never reach a customer's document. */
     private const INTERNAL_MARKERS = [
         'AI citation markers' => '/【[^】]*】|\bcite(?:turn\d+[a-z]+\d+)+|\bturn\d+(?:search|view|news|fetch)\d+/iu',
-        'placeholders' => '/\[(?:insert|your |applicant|name|university|programme|program|institution|date|todo|tbd)[^\]]*\]|\{\{.*?\}\}|\b(?:TODO|FIXME|TBD|XXX)\b|lorem ipsum/u',
+        'placeholders' => '/\[(?i:insert|your |applicant|name|university|programme|program|institution|date|todo|tbd)[^\]]*\]|\{\{.*?\}\}|\b(?:TODO|FIXME|TBD|XXX)\b|(?i:lorem ipsum)/u',
         'research notes' => '/\b(?:research notes?|internal notes?|note to (?:self|writer|editor)|writer\'s note|source notes?)\s*:/iu',
         'tracking parameters' => '/\butm_[a-z]+=|\bsrsltid=/iu',
     ];
@@ -388,23 +388,43 @@ class DocumentQa
         $total = count($pageTexts);
         $bodies = [];
         foreach ($pageTexts as $i => $text) {
-            $body = TextNormalizer::compactExtracted($text);
-            foreach ($layout->header as $line) {
-                $expected = TextNormalizer::compact(DocumentLayout::marginalText($line, $i + 1, $total));
-                if ($expected !== '' && str_starts_with($body, $expected)) {
-                    $body = substr($body, strlen($expected));
-                }
-            }
-            foreach (array_reverse($layout->footer) as $line) {
-                $expected = TextNormalizer::compact(DocumentLayout::marginalText($line, $i + 1, $total));
-                if ($expected !== '' && str_ends_with($body, $expected)) {
-                    $body = substr($body, 0, -strlen($expected));
-                }
-            }
-            $bodies[] = $body;
+            $marginal = array_values(array_filter(array_map(
+                fn (array $line) => TextNormalizer::compact(DocumentLayout::marginalText($line, $i + 1, $total)),
+                [...$layout->header, ...$layout->footer],
+            )));
+            $bodies[] = implode('', $this->stripMarginalLines(TextNormalizer::extractedLines($text), $marginal));
         }
 
         return $bodies;
+    }
+
+    /**
+     * Remove the expected header/footer lines found at either end of a page
+     * (extractors put them first, last, or — in stream order — both first).
+     * Up to three physical lines may form one expected line if it wrapped.
+     *
+     * @param  list<string>  $lines  compacted page lines
+     * @param  list<string>  $marginal  compacted header/footer lines expected on this page
+     * @return list<string>
+     */
+    private function stripMarginalLines(array $lines, array $marginal): array
+    {
+        do {
+            $removed = false;
+            foreach ([true, false] as $fromStart) {
+                for ($k = 1; $k <= min(3, count($lines)) && ! $removed; $k++) {
+                    $slice = $fromStart ? array_slice($lines, 0, $k) : array_slice($lines, -$k);
+                    $index = array_search(str_replace(TextNormalizer::LINE_END_HYPHEN, '-', implode('', $slice)), $marginal, true);
+                    if ($index !== false) {
+                        $lines = $fromStart ? array_slice($lines, $k) : array_slice($lines, 0, count($lines) - $k);
+                        array_splice($marginal, $index, 1);
+                        $removed = true;
+                    }
+                }
+            }
+        } while ($removed && $lines !== [] && $marginal !== []);
+
+        return $lines;
     }
 
     private function mentionsBrand(string $text, DocumentLayout $layout): bool

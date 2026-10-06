@@ -40,6 +40,8 @@ class TemplatedMail extends Mailable
     {
         return new Headers(text: [
             'X-Statementra-Email' => $this->email->uuid,
+            // Lets Postmark delivery webhooks identify the email when sending over SMTP.
+            'X-PM-Metadata-email_uuid' => $this->email->uuid,
             'X-Auto-Response-Suppress' => 'OOF, AutoReply',
         ]);
     }

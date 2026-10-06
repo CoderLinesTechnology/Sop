@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Service;
 use App\Models\ServiceField;
+use App\Models\UploadedFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -53,7 +54,7 @@ class UploadController extends Controller
 
         // Files already attached to a draft order can be removed by the same browser before payment.
         if (! $upload) {
-            $candidate = \App\Models\UploadedFile::query()->where('uuid', $uuid)->whereNotNull('order_id')->first();
+            $candidate = UploadedFile::query()->where('uuid', $uuid)->whereNotNull('order_id')->first();
             $order = $candidate ? Order::query()->find($candidate->order_id) : null;
             if ($order && CheckoutSession::owns($request, $order) && $order->status->isPrePayment()) {
                 $upload = $candidate;

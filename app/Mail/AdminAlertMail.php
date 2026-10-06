@@ -3,17 +3,15 @@
 namespace App\Mail;
 
 use App\Support\Settings;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /** Internal operational alert sent to the admin notification addresses. */
-class AdminAlertMail extends Mailable implements ShouldQueue
+class AdminAlertMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use SerializesModels;
 
     public function __construct(
         public readonly string $alertTitle,

@@ -10,10 +10,12 @@ class ListAiWorkflows extends ListRecords
 {
     protected static string $resource = AiWorkflowResource::class;
 
+    protected ?string $subheading = 'How documents are researched, written and checked. Services use the default workflow unless they name another.';
+
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()->label('New workflow'),
         ];
     }
 }

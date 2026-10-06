@@ -60,21 +60,27 @@ final class OperationsAudit
      */
     public static function orderViewed(Order $order): void
     {
+        self::viewed('order.viewed', $order);
+    }
+
+    /** Log a view of a record holding customer data, at most once per admin per record per hour. */
+    public static function viewed(string $action, Model $target): void
+    {
         $admin = AdminContext::user();
         if (! $admin) {
             return;
         }
 
         $recentlyLogged = AuditLog::query()
-            ->where('target_type', class_basename($order))
-            ->where('target_id', (string) $order->getKey())
-            ->where('action', 'order.viewed')
+            ->where('target_type', class_basename($target))
+            ->where('target_id', (string) $target->getKey())
+            ->where('action', $action)
             ->where('admin_user_id', $admin->id)
             ->where('created_at', '>=', now()->subMinutes(self::VIEW_WINDOW_MINUTES))
             ->exists();
 
         if (! $recentlyLogged) {
-            Audit::log('order.viewed', $order, admin: $admin);
+            Audit::log($action, $target, admin: $admin);
         }
     }
 }

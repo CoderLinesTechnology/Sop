@@ -34,23 +34,40 @@ class DocumentFactory
         ?AdminUser $admin = null,
         ?float $qualityScore = null,
     ): DocumentVersion {
-        $kind = $order->documentKind();
-        $model = $this->complete($model, $order, $requirements, $template, $kind);
-        $snapshot = TemplateSnapshot::make($template, $requirements, [
-            'document_kind' => $kind,
-            'document_type' => self::documentType($order),
-            'institution' => $order->institution,
-            'programme' => $order->programme,
-        ]);
+        $model = $this->complete($model, $order, $requirements, $template);
 
-        return DB::transaction(function () use ($order, $model, $template, $requirements, $source, $job, $revision, $admin, $qualityScore, $kind, $snapshot) {
+        return $this->storeVersion(
+            $order, $model, $this->snapshot($order, $template, $requirements), $template->exists ? $template->getKey() : null,
+            $requirements, $source, $job, $revision, $admin, $qualityScore,
+        );
+    }
+
+    /**
+     * Store a version exactly as given (no presentation defaults added), with
+     * an explicit formatting snapshot. Used by administrator uploads, where
+     * the stored content must mirror the uploaded file.
+     */
+    public function storeVersion(
+        Order $order,
+        DocumentModel $model,
+        array $snapshot,
+        ?int $templateId,
+        ResolvedRequirements $requirements,
+        string $source,
+        ?AiJob $job = null,
+        ?Revision $revision = null,
+        ?AdminUser $admin = null,
+        ?float $qualityScore = null,
+        ?string $notes = null,
+    ): DocumentVersion {
+        return DB::transaction(function () use ($order, $model, $snapshot, $templateId, $requirements, $source, $job, $revision, $admin, $qualityScore, $notes) {
             // Serialise version numbering per order.
             Order::query()->whereKey($order->id)->lockForUpdate()->first();
 
             $document = Document::query()->where('order_id', $order->id)->latest('id')->first()
                 ?? Document::query()->create([
                     'order_id' => $order->id,
-                    'kind' => $kind,
+                    'kind' => $order->documentKind(),
                     'title' => mb_substr($model->title ?: self::documentType($order), 0, 255),
                     'status' => 'in_progress',
                 ]);
@@ -70,13 +87,28 @@ class DocumentFactory
                 'char_count' => $model->characterCount(true),
                 'char_count_no_spaces' => $model->characterCount(false),
                 'language_variant' => $model->languageVariant,
-                'document_template_id' => $template->exists ? $template->getKey() : null,
+                'document_template_id' => $templateId,
                 'template_snapshot' => $snapshot,
                 'requirements_snapshot' => $requirements->toArray(),
                 'quality_score' => $qualityScore === null ? null : max(0, min(99.99, round($qualityScore, 2))), // decimal(4,2)
                 'created_by_admin_id' => $admin?->id,
+                'notes' => $notes,
             ]);
         });
+    }
+
+    /**
+     * The formatting snapshot for an order: template + requirement overrides + naming context.
+     * $preferTemplate: the template was chosen explicitly, so country conventions do not override it.
+     */
+    public function snapshot(Order $order, DocumentTemplate $template, ResolvedRequirements $requirements, bool $preferTemplate = false): array
+    {
+        return TemplateSnapshot::make($template, $requirements, [
+            'document_kind' => $order->documentKind(),
+            'document_type' => self::documentType($order),
+            'institution' => $order->institution,
+            'programme' => $order->programme,
+        ], $preferTemplate);
     }
 
     /** The human document type used in titles and file names, e.g. "Statement of Purpose". */
@@ -87,10 +119,10 @@ class DocumentFactory
         return $kind && $kind !== DocumentKind::Custom ? $kind->getLabel() : $order->serviceName();
     }
 
-    private function complete(DocumentModel $model, Order $order, ResolvedRequirements $requirements, DocumentTemplate $template, string $kind): DocumentModel
+    private function complete(DocumentModel $model, Order $order, ResolvedRequirements $requirements, DocumentTemplate $template): DocumentModel
     {
         $date = $model->date;
-        if (blank($date) && DocumentLayout::isLetter($model, $kind)) {
+        if (blank($date) && DocumentLayout::isLetter($model, $order->documentKind())) {
             $date = now()->format($template->date_format ?: $requirements->dateFormat ?: LanguageVariant::dateFormat($requirements->languageVariant));
         }
 

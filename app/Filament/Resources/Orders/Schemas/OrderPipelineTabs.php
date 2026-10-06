@@ -97,6 +97,7 @@ class OrderPipelineTabs
                     ->schema([
                         RepeatableEntry::make('researchSources')
                             ->hiddenLabel()
+                            ->state(fn (Order $record) => $record->researchSources->sortBy([['authority_rank', 'asc'], ['id', 'asc']])->values())
                             ->table([
                                 TableColumn::make('Source'),
                                 TableColumn::make('Type'),
@@ -207,9 +208,13 @@ class OrderPipelineTabs
                             TextEntry::make('timing')
                                 ->label('Duration')
                                 ->state(fn (AiJob $record): string => $record->started_at ? Format::minutes($record->durationMinutes()) : Format::PLACEHOLDER)
-                                ->helperText(fn (AiJob $record): ?string => $record->started_at
-                                    ? Format::dateTime($record->started_at).' → '.($record->finished_at ? Format::dateTime($record->finished_at) : 'running')
-                                    : null),
+                                ->helperText(fn (AiJob $record): ?string => match (true) {
+                                    $record->started_at !== null => Format::dateTime($record->started_at).' → '.($record->finished_at
+                                        ? Format::dateTime($record->finished_at)
+                                        : (filled($record->getAttribute('next_run_at')) ? 'next step '.Format::dateTime($record->getAttribute('next_run_at')) : 'running')),
+                                    filled($record->getAttribute('next_run_at')) => 'Starts '.Format::dateTime($record->getAttribute('next_run_at')),
+                                    default => null,
+                                }),
                             TextEntry::make('tokens')
                                 ->label('Tokens')
                                 ->state(fn (AiJob $record): string => number_format((int) $record->total_input_tokens).' in · '.number_format((int) $record->total_output_tokens).' out')

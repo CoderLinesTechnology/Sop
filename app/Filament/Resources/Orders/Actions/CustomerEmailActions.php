@@ -37,7 +37,7 @@ final class CustomerEmailActions
             ->modalSubmitActionLabel('Resend')
             ->action(fn (Order $record) => ActionRunner::run(
                 fn () => OperationsAudit::ensure('order.document_resent', $record, fn () => app(DocumentDelivery::class)->resend($record)),
-                'Document email queued',
+                'Sending the document email',
                 "Couldn't resend the document email",
                 'Delivery status updates in the Emails tab.',
             ));
@@ -61,7 +61,7 @@ final class CustomerEmailActions
             ));
     }
 
-    /** Queue the "order link" email with a newly signed link for the order's current access version. */
+    /** Send the "order link" email with a newly signed link for the order's current access version. */
     public static function sendOrderLink(Order $order): EmailMessage
     {
         $email = app(TransactionalMailer::class)->send(

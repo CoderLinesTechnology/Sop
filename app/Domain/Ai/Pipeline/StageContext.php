@@ -89,7 +89,7 @@ final class StageContext
 
     /**
      * HTTP timeout for the next model call, bounded by what is left of this
-     * stage run (the queue job is killed at 900 s).
+     * stage's time budget (which fits inside the worker's lease).
      *
      * @throws StageFailure when too little time is left for another call
      */
@@ -380,10 +380,6 @@ final class StageContext
 
         if (in_array($analysis['language_variant_source'] ?? null, ['stated_in_prompt', 'stated_in_requirements'], true) && filled($analysis['language_variant'] ?? null)) {
             $stated['language_variant'] = (string) $analysis['language_variant'];
-        }
-
-        if (filled($analysis['application_platform'] ?? null)) {
-            $stated['application_platform'] = (string) $analysis['application_platform'];
         }
 
         return $stated;

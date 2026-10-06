@@ -4,10 +4,10 @@ namespace App\Filament\Resources\Services\Tables;
 
 use App\Enums\DocumentKind;
 use App\Filament\Resources\Services\ServiceResource;
+use App\Filament\Support\Catalogue\AdminAccess;
 use App\Filament\Support\Catalogue\ServiceAccess;
 use App\Filament\Support\Catalogue\ServiceArchiver;
 use App\Filament\Support\Catalogue\ServiceDuplicator;
-use App\Filament\Support\Catalogue\AdminAccess;
 use App\Models\Service;
 use App\Support\Money;
 use Filament\Actions\Action;

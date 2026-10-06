@@ -16,6 +16,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ToggleButtons;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
@@ -60,7 +61,7 @@ final class ServiceFieldSchema
             ->mutateRelationshipDataBeforeSaveUsing(fn (array $data): array => ServiceFieldNormalizer::normalize($data));
     }
 
-    /** @return array<\Filament\Schemas\Components\Component> */
+    /** @return array<Component> */
     public static function itemSchema(): array
     {
         return [

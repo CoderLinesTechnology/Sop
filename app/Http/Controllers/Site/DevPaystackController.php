@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Site;
 use App\Domain\Payments\Paystack\MockPaystackGateway;
 use App\Domain\Payments\Paystack\PaystackGateway;
 use App\Http\Controllers\Controller;
-use App\Jobs\SendMockPaystackWebhook;
 use App\Support\Money;
+use App\Support\Runtime\AfterResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -38,7 +38,8 @@ class DevPaystackController extends Controller
         $transaction = $gateway->complete($reference, $success);
 
         if ($success) {
-            SendMockPaystackWebhook::dispatch(['event' => 'charge.success', 'data' => $transaction]);
+            // Like Paystack, deliver a signed webhook shortly after the redirect.
+            AfterResponse::run('mock-paystack-webhook:'.$reference, fn () => $gateway->deliverWebhook('charge.success', $transaction), timeLimitSeconds: 60);
         }
 
         return redirect()->away($transaction['callback_url'].'?reference='.urlencode($reference).'&trxref='.urlencode($reference));

@@ -16,6 +16,7 @@ use Filament\Support\Enums\FontFamily;
 use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\Indicator;
 use Filament\Tables\Filters\SelectFilter;
@@ -86,9 +87,13 @@ class OrdersTable
                             ->label('Include unpaid drafts')
                             ->helperText('New and form-submitted orders that never reached payment.'),
                     ])
-                    ->query(fn (Builder $query, array $data): Builder => ($data['include_drafts'] ?? false)
-                        ? $query
-                        : $query->submitted())
+                    ->query(function (Builder $query, array $data, HasTable $livewire): Builder {
+                        // Drafts stay visible when asked for, or when the status filter explicitly selects a draft status.
+                        $statuses = (array) data_get($livewire->tableFilters, 'status.values', []);
+                        $draftStatusSelected = array_intersect($statuses, OrderStatusGroups::values(OrderStatusGroups::DRAFTS)) !== [];
+
+                        return ($data['include_drafts'] ?? false) || $draftStatusSelected ? $query : $query->submitted();
+                    })
                     ->indicateUsing(fn (array $data): ?string => ($data['include_drafts'] ?? false) ? 'Including unpaid drafts' : null),
                 Filter::make('needs_attention')
                     ->label('Needs attention')

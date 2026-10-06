@@ -7,6 +7,7 @@ use App\Domain\Email\OrderEmailVariables;
 use App\Domain\Email\TransactionalMailer;
 use App\Domain\Notifications\AdminNotifier;
 use App\Domain\Orders\OrderStateMachine;
+use App\Domain\Orders\RevisionService;
 use App\Domain\Payments\Paystack\PaystackGateway;
 use App\Domain\Pricing\CouponReservations;
 use App\Enums\EmailTemplateKey;
@@ -21,6 +22,7 @@ use App\Models\User;
 use App\Support\Analytics;
 use App\Support\Audit;
 use App\Support\SecurityLog;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -110,7 +112,7 @@ class PaymentConfirmationService
 
             $payment->forceFill([
                 'status' => PaymentRecordStatus::Success,
-                'paid_at' => isset($data['paid_at']) ? \Illuminate\Support\Carbon::parse($data['paid_at']) : now(),
+                'paid_at' => isset($data['paid_at']) ? Carbon::parse($data['paid_at']) : now(),
                 'verified_at' => now(),
                 'provider_transaction_id' => isset($data['id']) ? (string) $data['id'] : null,
                 'channel' => isset($data['channel']) ? mb_substr((string) $data['channel'], 0, 40) : null,
@@ -191,13 +193,12 @@ class PaymentConfirmationService
             $order->forceFill(['user_id' => $user->id])->save();
         }
 
-        $afterCommit[] = function () use ($order) {
-            app(PipelineDispatcher::class)->startForOrder($order);
-
-            $this->mailer->send(EmailTemplateKey::PaymentReceived, $order->email, OrderEmailVariables::for($order), $order);
-            $this->notifier->paymentSucceeded($order);
-            Analytics::recordServer(AnalyticsEvent::PAYMENT_SUCCESS, ['service_id' => $order->service_id, 'order_id' => $order->id, 'value' => $order->total_amount]);
-        };
+        // Independent steps: one failing must not skip the others. A pipeline that
+        // fails to start is started later by the StartPendingFulfilment heartbeat task.
+        $afterCommit[] = fn () => app(PipelineDispatcher::class)->startForOrder($order);
+        $afterCommit[] = fn () => $this->mailer->send(EmailTemplateKey::PaymentReceived, $order->email, OrderEmailVariables::for($order), $order);
+        $afterCommit[] = fn () => $this->notifier->paymentSucceeded($order);
+        $afterCommit[] = fn () => Analytics::recordServer(AnalyticsEvent::PAYMENT_SUCCESS, ['service_id' => $order->service_id, 'order_id' => $order->id, 'value' => $order->total_amount]);
     }
 
     private function markRevisionPaid(Payment $payment, array &$afterCommit): void
@@ -208,7 +209,7 @@ class PaymentConfirmationService
         }
 
         $revision->forceFill(['status' => RevisionStatus::Requested])->save();
-        $afterCommit[] = fn () => app(\App\Domain\Orders\RevisionService::class)->begin($revision->refresh());
+        $afterCommit[] = fn () => app(RevisionService::class)->begin($revision->refresh());
     }
 
     private function handleUnsuccessful(Payment $payment, Order $order, string $status, array $data, array &$afterCommit): ConfirmationOutcome

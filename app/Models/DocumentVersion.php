@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Domain\Documents\DocumentModel;
+use App\Domain\Documents\QaResult;
+use App\Domain\Documents\ResolvedRequirements;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
@@ -69,5 +72,22 @@ class DocumentVersion extends Model
     public function isDeliverable(): bool
     {
         return $this->hasFiles() && $this->qa_status === 'passed';
+    }
+
+    /** The approved content as a DocumentModel. */
+    public function documentModel(): DocumentModel
+    {
+        return DocumentModel::fromArray((array) $this->content);
+    }
+
+    /** The requirements this version was written and validated against. */
+    public function resolvedRequirements(): ResolvedRequirements
+    {
+        return ResolvedRequirements::fromArray((array) $this->requirements_snapshot);
+    }
+
+    public function qaResult(): ?QaResult
+    {
+        return $this->qa_results ? QaResult::fromArray((array) $this->qa_results) : null;
     }
 }

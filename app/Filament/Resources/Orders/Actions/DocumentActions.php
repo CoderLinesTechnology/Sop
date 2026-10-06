@@ -201,8 +201,8 @@ final class DocumentActions
                     ->required()
                     ->native(false)
                     ->live()
-                    ->afterStateUpdated(function (?string $state, Set $set) use ($record): void {
-                        $version = $state ? $record->documentVersions()->whereKey($state)->first() : null;
+                    ->afterStateUpdated(function (mixed $state, Set $set) use ($record): void {
+                        $version = filled($state) ? $record->documentVersions()->whereKey($state)->first() : null;
                         foreach (self::textFormData($version) as $key => $value) {
                             if ($key !== 'version_id') {
                                 $set($key, $value);
@@ -284,7 +284,7 @@ final class DocumentActions
 
                 ActionRunner::run(
                     fn () => self::deliver($record, $version),
-                    'Delivery email queued',
+                    'Sending the delivery email',
                     "Couldn't deliver the version",
                     'v'.$version->version_number.' is on its way to '.$record->email.'.',
                     keepOpen: $action,
@@ -321,7 +321,7 @@ final class DocumentActions
         if ($succeeded && ($data['deliver'] ?? false) && $created) {
             ActionRunner::run(
                 fn () => self::deliver($order, $created),
-                'Delivery email queued',
+                'Sending the delivery email',
                 'The new version was created but not delivered',
             );
         }

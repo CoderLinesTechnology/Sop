@@ -38,10 +38,16 @@ class AiWorkflowPolicy
 
     public function delete(AdminUser $user, AiWorkflow $workflow): bool
     {
-        return AdminAccess::allows(Permission::AiManage, $user)
-            && ! $workflow->is_default
-            && ! $workflow->services()->withTrashed()->exists()
-            && ! AiJob::query()->where('ai_workflow_id', $workflow->id)->exists();
+        if (! AdminAccess::allows(Permission::AiManage, $user) || $workflow->is_default) {
+            return false;
+        }
+
+        // Tables preload these counts; fall back to queries elsewhere.
+        $services = $workflow->getAttribute('all_services_count');
+        $jobs = $workflow->getAttribute('jobs_count');
+
+        return ($services !== null ? (int) $services === 0 : ! $workflow->services()->withTrashed()->exists())
+            && ($jobs !== null ? (int) $jobs === 0 : ! AiJob::query()->where('ai_workflow_id', $workflow->id)->exists());
     }
 
     public function deleteAny(AdminUser $user): bool

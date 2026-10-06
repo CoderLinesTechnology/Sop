@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AnalyticsEvent;
 use App\Support\Analytics;
 use App\Support\Seo;
+use App\Support\Settings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -52,7 +53,7 @@ class ServiceController extends Controller
                 '@type' => 'Service',
                 'name' => $service->name,
                 'description' => Str::limit(strip_tags((string) Str::markdown((string) ($service->description ?: $service->short_description))), 300),
-                'provider' => ['@type' => 'Organization', 'name' => \App\Support\Settings::siteName(), 'url' => url('/')],
+                'provider' => ['@type' => 'Organization', 'name' => Settings::siteName(), 'url' => url('/')],
                 'areaServed' => 'Worldwide',
                 'offers' => [
                     '@type' => 'Offer',

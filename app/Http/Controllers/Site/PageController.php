@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Site;
 
 use App\Domain\Catalogue\Catalogue;
 use App\Http\Controllers\Controller;
+use App\Models\Page;
 use App\Support\Seo;
 use App\Support\Settings;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use League\CommonMark\Extension\Table\TableExtension;
 
 class PageController extends Controller
 {
@@ -62,7 +64,7 @@ class PageController extends Controller
     }
 
     /** Markdown → safe HTML with a few administrator-friendly placeholders. */
-    private function render(string $markdown, \App\Models\Page $page): string
+    private function render(string $markdown, Page $page): string
     {
         $markdown = strtr($markdown, [
             '{{date}}' => ($page->updated_at ?? now())->format('j F Y'),
@@ -75,6 +77,6 @@ class PageController extends Controller
         return (string) Str::markdown($markdown, [
             'html_input' => 'strip',
             'allow_unsafe_links' => false,
-        ], [new \League\CommonMark\Extension\Table\TableExtension]);
+        ], [new TableExtension]);
     }
 }

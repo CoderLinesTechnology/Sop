@@ -2,6 +2,8 @@
 
 namespace App\Domain\Ai\Llm;
 
+use App\Domain\Ai\Research\UrlNormalizer;
+
 /**
  * A normalised Responses API result: output text, refusal, citations, the
  * web-search activity (queries and the URLs the model actually saw) and token
@@ -54,7 +56,7 @@ final class LlmResponse
         $urls = array_merge($this->searchSources, array_column($this->citations, 'url'));
 
         return array_values(array_unique(array_filter(array_map(
-            fn ($url) => \App\Domain\Ai\Research\UrlNormalizer::normalize((string) $url),
+            fn ($url) => UrlNormalizer::normalize((string) $url),
             $urls,
         ))));
     }

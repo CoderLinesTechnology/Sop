@@ -3,6 +3,7 @@
 use App\Enums\AdminRole;
 use App\Models\AdminUser;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -20,8 +21,13 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->beforeEach(function () {
-        Storage::fake('private');
-        Storage::fake('public');
+        // Like Storage::fake(), but rooted per process: suites running side by
+        // side (separate databases) must not wipe each other's files.
+        foreach (['private', 'public'] as $disk) {
+            $root = storage_path('framework/testing/disks/'.$disk.'-'.getmypid());
+            (new Filesystem)->cleanDirectory($root);
+            Storage::set($disk, Storage::createLocalDriver(['root' => $root, 'throw' => false]));
+        }
     })
     ->in('Feature');
 

@@ -6,10 +6,12 @@ use App\Domain\Catalogue\Catalogue;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\ArticleCategory;
+use App\Support\ResponsiveImage;
 use App\Support\Seo;
 use App\Support\Settings;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use League\CommonMark\Extension\Table\TableExtension;
 
 class ArticleController extends Controller
 {
@@ -42,7 +44,7 @@ class ArticleController extends Controller
                 '@type' => 'Article',
                 'headline' => $article->title,
                 'description' => $article->excerpt,
-                'image' => $article->cover_image_path ? (\App\Support\ResponsiveImage::resolve($article->cover_image_path)['src'] ?? null) : null,
+                'image' => $article->cover_image_path ? (ResponsiveImage::resolve($article->cover_image_path)['src'] ?? null) : null,
                 'datePublished' => $article->published_at?->toIso8601String(),
                 'dateModified' => $article->updated_at?->toIso8601String(),
                 'author' => ['@type' => 'Organization', 'name' => $article->author_name ?: Settings::siteName()],
@@ -54,7 +56,7 @@ class ArticleController extends Controller
 
         return view('site.resources.show', [
             'article' => $article,
-            'html' => Str::markdown((string) $article->body, ['html_input' => 'strip', 'allow_unsafe_links' => false], [new \League\CommonMark\Extension\Table\TableExtension]),
+            'html' => Str::markdown((string) $article->body, ['html_input' => 'strip', 'allow_unsafe_links' => false], [new TableExtension]),
             'related' => $related,
             'seo' => $seo,
         ]);

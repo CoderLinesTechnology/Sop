@@ -19,7 +19,7 @@ class NewsletterController extends Controller
 {
     public function subscribe(Request $request, TransactionalMailer $mailer): RedirectResponse
     {
-        $message = "Thanks! Please check your inbox to confirm your subscription.";
+        $message = 'Thanks! Please check your inbox to confirm your subscription.';
 
         if (SpamGuard::isBot($request)) {
             return back()->with('newsletter_status', $message);

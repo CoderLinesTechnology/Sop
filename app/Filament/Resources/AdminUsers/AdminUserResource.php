@@ -13,12 +13,26 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
+/** Administrator accounts, their roles and two-factor status. */
 class AdminUserResource extends Resource
 {
     protected static ?string $model = AdminUser::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
+
+    protected static string|UnitEnum|null $navigationGroup = 'System';
+
+    protected static ?int $navigationSort = 20;
+
+    protected static ?string $navigationLabel = 'Administrators';
+
+    protected static ?string $modelLabel = 'administrator';
+
+    protected static ?string $slug = 'administrators';
+
+    protected static ?string $recordTitleAttribute = 'name';
 
     public static function form(Schema $schema): Schema
     {
@@ -30,13 +44,6 @@ class AdminUserResource extends Resource
         return AdminUsersTable::configure($table);
     }
 
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
-    }
-
     public static function getPages(): array
     {
         return [
@@ -44,5 +51,11 @@ class AdminUserResource extends Resource
             'create' => CreateAdminUser::route('/create'),
             'edit' => EditAdminUser::route('/{record}/edit'),
         ];
+    }
+
+    /** @return list<string> */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'email'];
     }
 }

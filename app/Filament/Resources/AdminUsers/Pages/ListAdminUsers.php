@@ -10,10 +10,12 @@ class ListAdminUsers extends ListRecords
 {
     protected static string $resource = AdminUserResource::class;
 
+    protected ?string $subheading = 'Everyone who can sign in to this panel. Accounts are deactivated rather than deleted so the audit trail stays intact.';
+
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()->label('New administrator'),
         ];
     }
 }

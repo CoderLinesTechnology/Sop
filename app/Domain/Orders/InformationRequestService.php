@@ -5,6 +5,7 @@ namespace App\Domain\Orders;
 use App\Domain\Ai\PipelineDispatcher;
 use App\Domain\Email\OrderEmailVariables;
 use App\Domain\Email\TransactionalMailer;
+use App\Domain\Notifications\AdminNotifier;
 use App\Enums\EmailTemplateKey;
 use App\Enums\FieldSection;
 use App\Enums\OrderStatus;
@@ -151,7 +152,7 @@ class InformationRequestService
 
         if (Settings::get('orders.needs_info_timeout_action', 'proceed') === 'manual_review') {
             $this->states->transition($order, OrderStatus::ManualReview, 'system', reason: 'Customer did not answer the information request in time');
-            app(\App\Domain\Notifications\AdminNotifier::class)->manualReviewRequired($order, 'The customer did not answer the follow-up questions in time.');
+            app(AdminNotifier::class)->manualReviewRequired($order, 'The customer did not answer the follow-up questions in time.');
 
             return;
         }

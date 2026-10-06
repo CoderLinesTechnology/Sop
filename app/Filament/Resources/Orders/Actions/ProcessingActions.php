@@ -15,7 +15,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Support\Icons\Heroicon;
 
 /**
- * AI pipeline controls (orders.manage). Every call goes through
+ * AI pipeline controls (orders.manage or ai.manage). Every call goes through
  * PipelineDispatcher; failures — including operations the pipeline does not
  * support yet — are reported as notifications instead of breaking the page.
  */
@@ -41,7 +41,7 @@ final class ProcessingActions
             ->label('Start processing')
             ->icon(Heroicon::OutlinedPlay)
             ->color('success')
-            ->authorize('manage')
+            ->authorize('controlPipeline')
             ->visible(fn (Order $record): bool => OrderInsights::canStartProcessing($record))
             ->requiresConfirmation()
             ->modalHeading('Start processing this order?')
@@ -61,7 +61,7 @@ final class ProcessingActions
             ->label('Retry processing')
             ->icon(Heroicon::OutlinedArrowPath)
             ->color('warning')
-            ->authorize('manage')
+            ->authorize('controlPipeline')
             ->visible(fn (Order $record): bool => OrderInsights::canRetry($record))
             ->requiresConfirmation()
             ->modalHeading('Retry processing?')
@@ -81,7 +81,7 @@ final class ProcessingActions
             ->label('Pause processing')
             ->icon(Heroicon::OutlinedPause)
             ->color('warning')
-            ->authorize('manage')
+            ->authorize('controlPipeline')
             ->visible(fn (Order $record): bool => OrderInsights::canPause($record))
             ->modalHeading('Pause processing')
             ->modalDescription('The pipeline stops after the stage that is currently running. The customer is not notified.')
@@ -103,7 +103,7 @@ final class ProcessingActions
             ->label('Resume processing')
             ->icon(Heroicon::OutlinedPlay)
             ->color('success')
-            ->authorize('manage')
+            ->authorize('controlPipeline')
             ->visible(fn (Order $record): bool => OrderInsights::canResume($record))
             ->modalHeading('Resume processing')
             ->modalDescription('Continues the pipeline from where it stopped. If the order is waiting for the customer, it continues with the information available.')
@@ -125,15 +125,15 @@ final class ProcessingActions
             ->label('Skip failed step')
             ->icon(Heroicon::OutlinedForward)
             ->color('warning')
-            ->authorize('manage')
-            ->visible(fn (Order $record): bool => OrderInsights::failedStages($record) !== [])
+            ->authorize('controlPipeline')
+            ->visible(fn (Order $record): bool => OrderInsights::skippableStages($record) !== [])
             ->modalHeading('Skip a failed step')
-            ->modalDescription('Marks the stage as skipped and continues with the next one. Required stages usually cannot be skipped; prefer retrying them.')
+            ->modalDescription('Marks the stage where the run stopped as skipped and continues with the next one. Rendering, file checks and delivery can never be skipped; prefer retrying required stages.')
             ->schema(fn (Order $record): array => [
                 Select::make('stage')
                     ->label('Failed stage')
-                    ->options(OrderInsights::failedStages($record))
-                    ->default(array_key_first(OrderInsights::failedStages($record)))
+                    ->options(OrderInsights::skippableStages($record))
+                    ->default(array_key_first(OrderInsights::skippableStages($record)))
                     ->required()
                     ->native(false),
                 self::reasonField('Why is it safe to skip this stage?'),
@@ -159,11 +159,11 @@ final class ProcessingActions
             ->label('Cancel processing')
             ->icon(Heroicon::OutlinedStop)
             ->color('danger')
-            ->authorize('manage')
+            ->authorize('controlPipeline')
             ->visible(fn (Order $record): bool => OrderInsights::hasActiveJob($record))
             ->requiresConfirmation()
             ->modalHeading('Cancel processing?')
-            ->modalDescription('Stops the current pipeline run. This does not refund the customer; use Refund or Change status afterwards if needed.')
+            ->modalDescription('Stops every unfinished pipeline run. An order that was mid-processing moves to Manual review. This does not refund the customer; use Refund or Change status afterwards if needed.')
             ->schema([self::reasonField('Why are you cancelling processing?')])
             ->modalSubmitActionLabel('Cancel processing')
             ->action(fn (array $data, Order $record, Action $action) => ActionRunner::run(
@@ -182,11 +182,11 @@ final class ProcessingActions
             ->label('Regenerate document')
             ->icon(Heroicon::OutlinedSparkles)
             ->color('warning')
-            ->authorize('manage')
+            ->authorize('controlPipeline')
             ->visible(fn (Order $record): bool => OrderInsights::canRegenerate($record))
             ->requiresConfirmation()
             ->modalHeading('Regenerate the document?')
-            ->modalDescription('Starts a completely new generation (research, writing and review) as a new pipeline run. Existing versions remain available. AI costs apply again.')
+            ->modalDescription('Starts a completely new generation (research, writing and review) as a new pipeline run; any unfinished run is cancelled first. Existing versions remain available. AI costs apply again.')
             ->modalSubmitActionLabel('Regenerate')
             ->action(fn (Order $record) => ActionRunner::run(
                 fn () => OperationsAudit::ensure('order.regeneration_started', $record,

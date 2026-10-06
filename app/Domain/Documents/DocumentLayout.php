@@ -52,8 +52,9 @@ final class DocumentLayout
             'programme' => $context['programme'],
         ];
 
-        $title = $s['title_template'] ? self::fill($s['title_template'], $values) : self::clean($model->title);
-        $title = $title ?: (string) self::clean($model->title);
+        // The title is approved content: the formatting stage already applied the template's
+        // title_template when it built the model, so it is never re-derived here.
+        $title = (string) self::clean($model->title);
         $subtitle = self::clean($model->subtitle);
         $isLetter = self::isLetter($model, (string) $context['document_kind']);
         $date = self::formatDate($model->date, $s['date_format'] ?: LanguageVariant::dateFormat($model->languageVariant));

@@ -36,7 +36,7 @@ final class OrderProgress
         $job = $order->aiJobs()->where('kind', AiJob::KIND_ORDER)->latest('id')->first();
         $finished = $job
             ? $job->steps()->whereIn('status', [StepStatus::Completed->value, StepStatus::Skipped->value])->pluck('stage')
-                ->map(fn ($stage) => $stage instanceof PipelineStage ? $stage : PipelineStage::from($stage))->unique()->all()
+                ->map(fn ($stage) => $stage instanceof PipelineStage ? $stage->value : (string) $stage)->unique()->values()->all()
             : [];
 
         $steps = [];
@@ -46,7 +46,8 @@ final class OrderProgress
             $done = match ($definition['key']) {
                 'received' => $paid,
                 'email' => $delivered,
-                default => $delivered || ($definition['stages'] !== [] && array_diff($definition['stages'], $finished) === []),
+                default => $delivered || ($definition['stages'] !== []
+                    && array_diff(array_map(fn (PipelineStage $stage) => $stage->value, $definition['stages']), $finished) === []),
             };
 
             $state = 'pending';

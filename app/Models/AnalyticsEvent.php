@@ -16,13 +16,21 @@ use Illuminate\Database\Eloquent\Model;
 class AnalyticsEvent extends Model
 {
     public const PAGE_VIEW = 'page_view';
+
     public const SERVICE_VIEW = 'service_view';
+
     public const FORM_START = 'form_start';
+
     public const FORM_COMPLETE = 'form_complete';
+
     public const CHECKOUT_START = 'checkout_start';
+
     public const PAYMENT_SUCCESS = 'payment_success';
+
     public const PAYMENT_FAILED = 'payment_failed';
+
     public const COUPON_APPLIED = 'coupon_applied';
+
     public const NEWSLETTER_SIGNUP = 'newsletter_signup';
 
     protected function casts(): array

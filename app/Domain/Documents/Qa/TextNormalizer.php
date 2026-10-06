@@ -57,8 +57,27 @@ final class TextNormalizer
     }
 
     /**
+     * Extracted text as compacted, non-empty lines (line-end hyphens marked),
+     * so header, footer and page-number lines can be recognised and removed.
+     *
+     * @return list<string>
+     */
+    public static function extractedLines(string $text): array
+    {
+        $text = self::normalize($text);
+        $text = preg_replace('/(?<=\pL)-[ ]*\n(?=[ ]*\pL)/u', self::LINE_END_HYPHEN."\n", $text) ?? $text;
+
+        return array_values(array_filter(array_map(
+            fn (string $line) => preg_replace('/\s+/u', '', $line) ?? '',
+            explode("\n", $text),
+        ), fn (string $line) => $line !== ''));
+    }
+
+    /**
      * Compare expected (model) text with extracted text, both compacted.
-     * Line-end hyphens in the extraction match a real hyphen or nothing.
+     * Hyphenation is undone: a hyphen that ended a line in the extraction
+     * matches a real hyphen or nothing, and a hyphen pdftotext dropped while
+     * joining a word split across lines ("self-|motivated") is tolerated.
      *
      * @return array{equal:bool, detail:string}
      */
@@ -80,6 +99,12 @@ final class TextNormalizer
                 continue;
             }
             if ($e[$i] !== $a[$j]) {
+                if ($e[$i] === '-' && $i > 0 && $i + 1 < $ne && $e[$i + 1] === $a[$j]) {
+                    $i++; // hyphen removed by the extractor's de-hyphenation
+
+                    continue;
+                }
+
                 break;
             }
             $i++;
@@ -93,7 +118,7 @@ final class TextNormalizer
             return ['equal' => true, 'detail' => "{$label} text matches the approved content exactly ({$ne} visible characters)."];
         }
 
-        $context = fn (array $chars, int $at) => self::visible(implode('', array_slice($chars, max(0, $at - 30), 30)));
+        $context = fn (array $chars, int $at) => self::visible(implode('', array_slice($chars, max(0, $at - 30), $at - max(0, $at - 30))));
         $after = fn (array $chars, int $at) => self::visible(implode('', array_slice($chars, $at, 40)));
 
         if ($j >= $na) {

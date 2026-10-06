@@ -11,7 +11,8 @@ use Throwable;
  * Optional DOCX → PDF conversion with headless LibreOffice, used to prove a
  * generated DOCX opens and lays out in a real word processor, and to produce
  * a faithful PDF from an administrator's final DOCX. Each run uses its own
- * throw-away profile so parallel workers never share LibreOffice state.
+ * throw-away profile so concurrent requests never share LibreOffice state.
+ * Runs synchronously (inside the web request), hence the short timeout.
  */
 class LibreOffice
 {
@@ -26,7 +27,7 @@ class LibreOffice
     }
 
     /** PDF bytes, or null when conversion is impossible or failed. */
-    public function docxToPdf(string $docxBytes, int $timeoutSeconds = 120): ?string
+    public function docxToPdf(string $docxBytes, int $timeoutSeconds = 45): ?string
     {
         $binary = $this->binary();
         if ($binary === null) {

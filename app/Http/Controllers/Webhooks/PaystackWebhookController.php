@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Webhooks;
 
+use App\Domain\Payments\PaymentEventProcessor;
 use App\Domain\Payments\Paystack\WebhookSignature;
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessPaymentEvent;
 use App\Models\PaymentEvent;
+use App\Support\Runtime\AfterResponse;
 use App\Support\SecurityLog;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -62,7 +63,10 @@ class PaystackWebhookController extends Controller
             return response()->json(['message' => 'Invalid signature.'], 401);
         }
 
-        ProcessPaymentEvent::dispatch($event->id);
+        // Acknowledge at once; verify and apply right after the response.
+        // Pending events are retried by the heartbeat if this attempt dies.
+        $eventId = $event->id;
+        AfterResponse::run('payment-event:'.$eventId, fn () => app(PaymentEventProcessor::class)->process($eventId), timeLimitSeconds: 120);
 
         return response()->json(['status' => 'accepted']);
     }

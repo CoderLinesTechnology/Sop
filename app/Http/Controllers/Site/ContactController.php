@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Site;
 
 use App\Domain\Catalogue\Catalogue;
+use App\Domain\Email\OrderEmailVariables;
 use App\Domain\Email\TransactionalMailer;
 use App\Domain\Notifications\AdminNotifier;
 use App\Enums\EmailTemplateKey;
@@ -61,7 +62,7 @@ class ContactController extends Controller
 
         $notifier->supportMessage($message->email, $order);
         $mailer->send(EmailTemplateKey::SupportReceived, $message->email, [
-            'customer_name' => \App\Domain\Email\OrderEmailVariables::firstName($message->name),
+            'customer_name' => OrderEmailVariables::firstName($message->name),
             'order_id' => $reference ?: 'general enquiry',
         ], $order);
 

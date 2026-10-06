@@ -4,9 +4,9 @@ namespace App\Domain\Email;
 
 use App\Enums\EmailStatus;
 use App\Enums\EmailTemplateKey;
-use App\Jobs\SendEmailMessage;
 use App\Models\EmailMessage;
 use App\Models\Order;
+use App\Support\Runtime\AfterResponse;
 
 /**
  * Sends a templated transactional email: renders it, records it in the
@@ -24,6 +24,7 @@ class TransactionalMailer
      * @param  array<string, mixed>  $variables
      * @param  list<array{disk:string,path:string,encrypted:bool,filename:string,mime:string,size?:int}>  $attachments
      * @param  array<string, mixed>  $meta  e.g. ['purpose' => 'delivery', 'document_version_id' => 12]
+     * @param  bool  $afterCommit  kept for compatibility: sending always waits for the surrounding transaction to commit
      */
     public function send(
         EmailTemplateKey $key,
@@ -54,10 +55,9 @@ class TransactionalMailer
             'meta' => $meta ?: null,
         ]);
 
-        $job = SendEmailMessage::dispatch($email->id);
-        if ($afterCommit) {
-            $job->afterCommit();
-        }
+        // Sent right after the response (after the surrounding transaction commits);
+        // the heartbeat retries anything that does not go out.
+        $this->sendAfterResponse($email);
 
         return $email;
     }
@@ -70,8 +70,14 @@ class TransactionalMailer
         $copy->meta = array_merge($original->meta ?? [], ['resend_of' => $original->uuid]);
         $copy->save();
 
-        SendEmailMessage::dispatch($copy->id)->afterCommit();
+        $this->sendAfterResponse($copy);
 
         return $copy;
+    }
+
+    private function sendAfterResponse(EmailMessage $email): void
+    {
+        $id = $email->id;
+        AfterResponse::run('email:'.$id, fn () => app(EmailSender::class)->send($id), timeLimitSeconds: 120);
     }
 }

@@ -118,6 +118,11 @@ class Catalogue
         }, $rows));
     }
 
+    public static function forgetPage(string $slug): void
+    {
+        Cache::forget(self::CACHE_TAG_PREFIX.'page:'.$slug);
+    }
+
     /** Forget every cached public read model (called when admins change content). */
     public static function flush(): void
     {

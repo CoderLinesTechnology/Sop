@@ -2,6 +2,7 @@
 
 namespace App\Filament\Support\Catalogue;
 
+use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 
@@ -9,7 +10,7 @@ use Filament\Forms\Components\TextInput;
 final class SeoFields
 {
     /**
-     * @return list<\Filament\Forms\Components\Field>
+     * @return list<Field>
      */
     public static function make(?string $ogImageField = 'og_image_path', string $mediaDirectory = 'seo'): array
     {

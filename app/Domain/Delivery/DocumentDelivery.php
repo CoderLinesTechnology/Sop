@@ -69,7 +69,7 @@ class DocumentDelivery
         return $email;
     }
 
-    /** Called by SendEmailMessage once the provider accepted a delivery email. */
+    /** Called by EmailSender once the provider accepted a delivery email. */
     public function markDelivered(EmailMessage $email): void
     {
         $order = $email->order;

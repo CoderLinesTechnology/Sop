@@ -6,6 +6,7 @@ use App\Domain\Documents\Renderers\DocxRenderer;
 use App\Domain\Documents\Renderers\PdfRenderer;
 use App\Domain\Files\FileVault;
 use App\Models\DocumentVersion;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -27,6 +28,9 @@ class DocumentRenderer
     public function render(DocumentVersion $version): DocumentVersion
     {
         $model = DocumentModel::fromArray((array) $version->content);
+        if ($model->blocks === []) {
+            throw new RuntimeException("Document version {$version->uuid} has no content to render.");
+        }
         $snapshot = TemplateSnapshot::normalize((array) $version->template_snapshot);
         $layout = DocumentLayout::make($model, $snapshot);
 

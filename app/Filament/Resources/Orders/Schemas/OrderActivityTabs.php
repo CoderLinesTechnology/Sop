@@ -5,10 +5,12 @@ namespace App\Filament\Resources\Orders\Schemas;
 use App\Enums\EmailTemplateKey;
 use App\Enums\PaymentRecordStatus;
 use App\Filament\Resources\Orders\Actions\OrderManagementActions;
+use App\Filament\Resources\Orders\OrderInsights;
 use App\Filament\Resources\Payments\PaymentResource;
 use App\Filament\Support\Operations\AdminContext;
 use App\Filament\Support\Operations\AdminNames;
 use App\Filament\Support\Operations\Format;
+use App\Filament\Support\Operations\RecordMemo;
 use App\Models\AuditLog;
 use App\Models\DocumentVersion;
 use App\Models\EmailMessage;
@@ -95,9 +97,7 @@ class OrderActivityTabs
                                 default => 'gray',
                             })
                             ->formatStateUsing(fn (?string $state): string => $state ? str($state)->ucfirst()->toString() : 'Not checked')
-                            ->tooltip(fn (DocumentVersion $record): ?string => $record->qa_results
-                                ? str((string) json_encode($record->qa_results, JSON_UNESCAPED_SLASHES))->limit(600)->toString()
-                                : null)
+                            ->tooltip(fn (DocumentVersion $record): ?string => self::qaSummary($record))
                             ->placeholder('Not checked'),
                         TextEntry::make('length')
                             ->state(fn (DocumentVersion $record): string => number_format((int) $record->word_count).' words')
@@ -147,7 +147,7 @@ class OrderActivityTabs
                 RepeatableEntry::make('emails')
                     ->hiddenLabel()
                     ->table([
-                        TableColumn::make('Queued'),
+                        TableColumn::make('Created'),
                         TableColumn::make('Email'),
                         TableColumn::make('Status'),
                         TableColumn::make('Attempts'),
@@ -165,6 +165,7 @@ class OrderActivityTabs
                                 $record->delivered_at !== null => 'Delivered '.Format::dateTime($record->delivered_at),
                                 $record->sent_at !== null => 'Sent '.Format::dateTime($record->sent_at),
                                 $record->failed_at !== null => 'Failed '.Format::dateTime($record->failed_at),
+                                filled($record->getAttribute('next_attempt_at')) => 'Next attempt '.Format::dateTime($record->getAttribute('next_attempt_at')),
                                 default => null,
                             }),
                         TextEntry::make('attempts'),
@@ -201,9 +202,9 @@ class OrderActivityTabs
                         TextEntry::make('refundable')
                             ->label('Refundable balance')
                             ->state(function (Order $record): string {
-                                $payment = self::capturedPayment($record);
+                                $payment = OrderInsights::capturedPayment($record);
 
-                                return $payment ? Format::money($payment->refundableAmount(), $payment->currency) : Format::PLACEHOLDER;
+                                return $payment ? Format::money(OrderInsights::refundableAmount($record), $payment->currency) : Format::PLACEHOLDER;
                             })
                             ->weight(FontWeight::SemiBold),
                         RepeatableEntry::make('payments')
@@ -473,20 +474,26 @@ class OrderActivityTabs
             ]));
     }
 
-    /** @return Collection<int, AuditLog> loaded once per request and kept on the record */
+    /** @return Collection<int, AuditLog> loaded once per request */
     private static function auditTrail(Order $order): Collection
     {
-        if (! $order->relationLoaded('operationsAuditTrail')) {
-            $order->setRelation('operationsAuditTrail', AuditLog::query()
+        return RecordMemo::remember($order, 'audit-trail', function () use ($order): Collection {
+            // Document operations are audited against the new version, so include the order's versions.
+            $versionIds = $order->documentVersions->map(fn (DocumentVersion $version) => (string) $version->getKey())->all();
+
+            return AuditLog::query()
                 ->with('admin:id,name')
-                ->where('target_type', class_basename($order))
-                ->where('target_id', (string) $order->getKey())
+                ->where(function ($query) use ($order, $versionIds) {
+                    $query->where(fn ($q) => $q->where('target_type', class_basename($order))->where('target_id', (string) $order->getKey()));
+
+                    if ($versionIds !== []) {
+                        $query->orWhere(fn ($q) => $q->where('target_type', 'DocumentVersion')->whereIn('target_id', $versionIds));
+                    }
+                })
                 ->latest('id')
                 ->limit(self::AUDIT_LIMIT)
-                ->get());
-        }
-
-        return $order->getRelation('operationsAuditTrail');
+                ->get();
+        });
     }
 
     private static function auditDetails(AuditLog $log): HtmlString
@@ -508,12 +515,19 @@ class OrderActivityTabs
         return new HtmlString($parts ? '<div style="font-size:12px;line-height:1.5">'.implode('', $parts).'</div>' : '<span style="opacity:.6">'.Format::PLACEHOLDER.'</span>');
     }
 
-    private static function capturedPayment(Order $order): ?Payment
+    /** Failed file checks of a version (qa_results: {passed, checks: [{check, passed, detail}]}). */
+    private static function qaSummary(DocumentVersion $version): ?string
     {
-        return $order->payments
-            ->where('purpose', 'order')
-            ->filter(fn (Payment $payment) => in_array($payment->status, [PaymentRecordStatus::Success, PaymentRecordStatus::PartiallyRefunded], true))
-            ->sortByDesc('id')
-            ->first();
+        $checks = collect((array) data_get($version->qa_results, 'checks', []))->filter(fn ($check) => is_array($check));
+
+        if ($checks->isEmpty()) {
+            return null;
+        }
+
+        $failed = $checks->filter(fn (array $check) => ($check['passed'] ?? true) === false);
+
+        return $failed->isEmpty()
+            ? 'All '.$checks->count().' file checks passed.'
+            : str($failed->map(fn (array $check) => '['.($check['check'] ?? 'check').'] '.($check['detail'] ?? ''))->implode(' '))->limit(600)->toString();
     }
 }

@@ -30,7 +30,9 @@ final class ResolvedRequirements
      * @param  list<array{field:string,candidates:array,chosen:mixed,reason:string}>  $conflicts
      * @param  list<int>  $appliedRuleIds
      * @param  bool  $limitsIncludeHeadings  false when the platform shows the questions itself (UCAS):
-     *                                        headings are then not part of the counted text
+     *                                       headings are then not part of the counted text
+     * @param  array<string,string>  $fieldSources  where each resolved value came from, by property name
+     *                                              (e.g. ['maxWords' => 'customer', 'pageSize' => 'convention'])
      */
     public function __construct(
         public ?int $minWords = null,
@@ -57,7 +59,17 @@ final class ResolvedRequirements
         public array $conflicts = [],
         public array $appliedRuleIds = [],
         public bool $limitsIncludeHeadings = true,
+        public array $fieldSources = [],
     ) {}
+
+    /** Source types that express national convention or guidance rather than an instruction for this application. */
+    public const COUNTRY_LEVEL_SOURCES = ['convention', 'rule:country', 'government'];
+
+    /** Whether a value (by property name) comes only from country-level convention or guidance. */
+    public function isConvention(string $property): bool
+    {
+        return in_array($this->fieldSources[$property] ?? null, self::COUNTRY_LEVEL_SOURCES, true);
+    }
 
     /** The text that length limits apply to (the body; without headings when the platform supplies the questions). */
     public function countableText(DocumentModel $model): string

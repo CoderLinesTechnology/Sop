@@ -9,6 +9,7 @@ use App\Filament\Resources\Orders\Actions\ProcessingActions;
 use App\Filament\Resources\Orders\Actions\RefundOrderAction;
 use App\Filament\Resources\Orders\OrderResource;
 use App\Filament\Support\Operations\OperationsAudit;
+use App\Filament\Support\Operations\RecordMemo;
 use App\Models\Order;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -83,6 +84,8 @@ class ViewOrder extends ViewRecord
         parent::afterActionCalled($action);
 
         $order = $this->getRecord();
+
+        RecordMemo::forget($order);
 
         if ($order->exists) {
             $order->unsetRelations();

@@ -1,5 +1,15 @@
 <?php
 
+use App\Domain\Email\Tasks\SendPendingEmails;
+use App\Domain\Files\Tasks\ExtractPendingUploads;
+use App\Domain\Maintenance\ProcessInformationRequests;
+use App\Domain\Maintenance\PruneAbandonedDrafts;
+use App\Domain\Maintenance\PruneOperationalData;
+use App\Domain\Maintenance\PurgeExpiredOrderData;
+use App\Domain\Payments\Tasks\ProcessPendingPaymentEvents;
+use App\Domain\Payments\Tasks\ReconcilePayments;
+use App\Domain\Payments\Tasks\StartPendingFulfilment;
+
 /*
 |--------------------------------------------------------------------------
 | Statementra configuration
@@ -96,5 +106,37 @@ return [
 
     'monitoring' => [
         'alert_webhook_url' => env('ALERT_WEBHOOK_URL'),
+    ],
+
+    /*
+    | Request-driven runtime: Statementra needs no queue worker and no cron.
+    | Slow work runs after the response is sent; the AI pipeline continues
+    | through signed requests to itself; maintenance runs on a heartbeat that
+    | piggybacks on site traffic (and, optionally, an external uptime pinger
+    | calling /system/heartbeat/{token}).
+    */
+    'runtime' => [
+        // Base URL for requests the app makes to itself. Defaults to APP_URL;
+        // set it (e.g. http://127.0.0.1) if the server cannot reach its public URL.
+        'loopback_url' => env('RUNTIME_LOOPBACK_URL'),
+        'loopback_verify_tls' => (bool) env('RUNTIME_LOOPBACK_VERIFY_TLS', true),
+        'heartbeat_on_traffic' => (bool) env('RUNTIME_HEARTBEAT_ON_TRAFFIC', true),
+        // Secret path segment for the external ping URL; generated and stored in settings when empty.
+        'heartbeat_token' => env('RUNTIME_HEARTBEAT_TOKEN'),
+        'heartbeat_min_gap_seconds' => 60,
+        'heartbeat_budget_seconds' => 25,
+
+        // Heartbeat tasks in priority order: name => [run at most every N seconds, invokable class].
+        'tasks' => [
+            'payments.process-events' => [60, ProcessPendingPaymentEvents::class],
+            'orders.start-pending' => [120, StartPendingFulfilment::class],
+            'emails.send-pending' => [60, SendPendingEmails::class],
+            'uploads.extract-pending' => [120, ExtractPendingUploads::class],
+            'payments.reconcile' => [600, ReconcilePayments::class],
+            'orders.information-requests' => [900, ProcessInformationRequests::class],
+            'orders.prune-drafts' => [3600, PruneAbandonedDrafts::class],
+            'orders.purge-expired' => [21600, PurgeExpiredOrderData::class],
+            'system.prune-logs' => [86400, PruneOperationalData::class],
+        ],
     ],
 ];

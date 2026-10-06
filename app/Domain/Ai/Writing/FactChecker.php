@@ -19,9 +19,13 @@ use App\Domain\Documents\DocumentModel;
 final class FactChecker
 {
     public const UNSUPPORTED_NUMBER = 'unsupported_number';
+
     public const URL_OR_CITATION = 'url_or_citation';
+
     public const PLACEHOLDER = 'placeholder';
+
     public const UNKNOWN_INSTITUTION = 'unknown_institution';
+
     public const UNKNOWN_PROGRAMME = 'unknown_programme';
 
     /** Problem types sanitize() may resolve by removing the sentence. */

@@ -112,8 +112,13 @@ class RequirementResolver
     private int $seq = 0;
 
     /**
+     * $researched: verified findings from the research stage. Only findings
+     * with verified === true and an official source_type (App\Enums\SourceType,
+     * not "secondary") are used. Field names may be snake_case or camelCase
+     * ("max_words", "maxWords", "word_limit"...); values may be numbers or
+     * phrases ("4,000 characters", "2.54 cm", "double spacing").
+     *
      * @param  list<array{field:string,value:mixed,source_url:?string,source_type:string,quote:?string,verified:bool}>  $researched
-     *         verified findings from the research stage
      * @param  array<string, mixed>  $customerStated  limits stated in the customer's prompt/uploads (e.g. ['max_words' => 500])
      */
     public function resolve(Order $order, array $researched = [], array $customerStated = []): ResolvedRequirements
@@ -127,12 +132,10 @@ class RequirementResolver
         $now = now()->toIso8601String();
 
         // 1. The customer's own official instructions: what they stated, plus the limit field on the form.
+        //    (orders.language_variant is not a form field: the pipeline records the resolved variant there.)
         $customer = $this->normalizeFields($customerStated);
         if ($order->word_limit && ! array_key_exists('max_words', $customer)) {
             $customer['max_words'] = (int) $order->word_limit;
-        }
-        if (filled($order->language_variant) && ! array_key_exists('language_variant', $customer)) {
-            $customer['language_variant'] = $order->language_variant;
         }
         $customerSource = ['name' => 'Customer-provided application instructions', 'url' => null, 'type' => 'customer', 'checked_at' => $now];
         foreach ($customer as $field => $value) {
@@ -248,6 +251,10 @@ class RequirementResolver
             appliedRuleIds: array_values(array_unique($appliedRuleIds)),
             // When the platform shows each question itself (UCAS), only the answers count towards limits.
             limitsIncludeHeadings: ! ($sections !== [] && collect($sections)->every(fn (array $s) => filled($s['question'] ?? null))),
+            fieldSources: array_combine(
+                array_map(fn (string $field) => Str::camel($field), array_keys($chosen)),
+                array_map(fn (array $choice) => $choice['type'], $chosen),
+            ) + ['languageVariant' => 'default'],
         );
 
         $requirements->targetWords = $this->targetWords($requirements, $order, $kind);
@@ -327,7 +334,7 @@ class RequirementResolver
      * most recently verified). Ties between different values are ambiguous:
      * the strictest limit wins and the conflict is flagged.
      *
-     * @return array{value:mixed, authority:int, conflict:?array}|null
+     * @return array{value:mixed, authority:int, type:string, conflict:?array}|null
      */
     private function choose(string $field): ?array
     {
@@ -340,7 +347,7 @@ class RequirementResolver
         $top = $candidates[0];
         $distinct = collect($candidates)->unique(fn ($c) => $this->fingerprint($c['value']))->count();
         if ($distinct === 1) {
-            return ['value' => $top['value'], 'authority' => $top['authority'], 'conflict' => null];
+            return ['value' => $top['value'], 'authority' => $top['authority'], 'type' => $top['source']['type'], 'conflict' => null];
         }
 
         $tied = array_values(array_filter($candidates, fn ($c) => $c['authority'] === $top['authority'] && $c['priority'] === $top['priority']));
@@ -367,6 +374,7 @@ class RequirementResolver
         return [
             'value' => $winner['value'],
             'authority' => $winner['authority'],
+            'type' => $winner['source']['type'],
             'conflict' => [
                 'field' => $field,
                 'candidates' => array_map(fn ($c) => [
@@ -503,7 +511,7 @@ class RequirementResolver
             return true;
         }
 
-        $domain = strtolower(trim((string) $rule->institution_domain, " ./"));
+        $domain = strtolower(trim((string) $rule->institution_domain, ' ./'));
         $domain = preg_replace('#^(https?://)?(www\.)?#', '', $domain) ?? $domain;
 
         return $domain !== '' && collect($context['hosts'])->contains(fn (string $host) => $host === $domain || str_ends_with($host, '.'.$domain));

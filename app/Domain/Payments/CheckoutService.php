@@ -10,6 +10,7 @@ use App\Domain\Pricing\PriceCalculator;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentRecordStatus;
 use App\Enums\PaymentStatus;
+use App\Models\AnalyticsEvent;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Support\Analytics;
@@ -124,7 +125,7 @@ class CheckoutService
             return $payment;
         });
 
-        Analytics::record(\App\Models\AnalyticsEvent::CHECKOUT_START, $request, ['service_id' => $order->service_id, 'order_id' => $order->id, 'value' => $quote->total]);
+        Analytics::record(AnalyticsEvent::CHECKOUT_START, $request, ['service_id' => $order->service_id, 'order_id' => $order->id, 'value' => $quote->total]);
 
         if ($quote->total === 0) {
             $this->confirmations->confirmWaived($payment);

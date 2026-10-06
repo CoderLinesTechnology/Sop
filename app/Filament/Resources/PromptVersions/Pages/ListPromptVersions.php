@@ -10,10 +10,12 @@ class ListPromptVersions extends ListRecords
 {
     protected static string $resource = PromptVersionResource::class;
 
+    protected ?string $subheading = 'One active version per prompt key. New versions are drafts until someone with activation rights activates them.';
+
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()->label('New prompt version'),
         ];
     }
 }

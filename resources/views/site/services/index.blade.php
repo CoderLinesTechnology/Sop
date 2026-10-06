@@ -4,7 +4,7 @@
     $why = $page?->section('why') ?? [];
     $count = $services->count();
     $remainder = $count % 3;
-    $deliveryLabel = $services->first()['service']->deliveryLabel() ?? '20–30 minutes';
+    $deliveryLabel = ($services->first()['service'] ?? null)?->deliveryLabel() ?? '20–30 minutes';
 @endphp
 <x-layouts.site :seo="$seo">
     {{-- Hero --}}
@@ -75,16 +75,16 @@
                     @endforeach
                 </ul>
 
-                <figure class="relative flex min-h-[280px] flex-col justify-between overflow-hidden">
+                <figure class="flex flex-col overflow-hidden">
                     @if ($testimonial)
-                        <blockquote class="relative z-10 p-7 font-serif text-[1.1rem] leading-snug text-ink italic sm:p-10 lg:max-w-[70%]">
+                        <blockquote class="px-7 pt-7 font-serif text-[1.08rem] leading-snug text-ink italic sm:px-10 sm:pt-10">
                             &ldquo;{{ $testimonial->quote }}&rdquo;
-                            <footer class="mt-4 font-sans text-[0.8rem] text-muted not-italic">— {{ $testimonial->author_name }}@if ($testimonial->author_detail)<br><span class="text-[0.75rem]">({{ $testimonial->author_detail }})</span>@endif</footer>
+                            <footer class="mt-3 font-sans text-[0.8rem] text-muted not-italic">— {{ $testimonial->author_name }}@if ($testimonial->author_detail), {{ $testimonial->author_detail }}@endif</footer>
                         </blockquote>
                     @endif
-                    <x-picture path="images/people/testimonial.jpg" alt="" sizes="(min-width: 1024px) 300px, 60vw"
-                               img-class="absolute right-0 bottom-0 h-full max-h-[340px] w-auto object-cover object-top opacity-95 [mask-image:linear-gradient(to_left,black_70%,transparent)]"
-                               class="pointer-events-none" />
+                    <x-picture path="images/people/testimonial.jpg" alt="" sizes="(min-width: 1024px) 220px, 50vw"
+                               img-class="ml-auto h-60 w-auto object-cover object-top [mask-image:linear-gradient(to_left,black_75%,transparent)]"
+                               class="mt-auto block pt-4" />
                 </figure>
             </div>
         </div>

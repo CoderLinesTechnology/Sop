@@ -22,8 +22,9 @@ class PageFetcher
     public function __construct(private readonly SafeHttpClient $http) {}
 
     /**
+     * Status is one of: ok, http_error, blocked, failed, skipped.
+     *
      * @return array{status:string, http_status:?int, text:?string, content_hash:?string, error:?string}
-     *         status: ok | http_error | blocked | failed | skipped
      */
     public function fetch(string $url): array
     {

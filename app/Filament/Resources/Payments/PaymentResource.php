@@ -24,8 +24,6 @@ class PaymentResource extends Resource
 
     protected static ?string $slug = 'payments';
 
-    protected static ?string $recordRouteKeyName = 'reference';
-
     protected static ?string $recordTitleAttribute = 'reference';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCreditCard;

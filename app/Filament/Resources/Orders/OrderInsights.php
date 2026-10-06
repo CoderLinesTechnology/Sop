@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Orders;
 
+use App\Domain\Ai\Pipeline\StagePlan;
 use App\Domain\Orders\OrderStateMachine;
 use App\Enums\AiJobStatus;
 use App\Enums\OrderStatus;
@@ -9,10 +10,9 @@ use App\Enums\PaymentRecordStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\PipelineStage;
 use App\Enums\RefundStatus;
-use App\Enums\StepStatus;
 use App\Filament\Support\Operations\Format;
+use App\Filament\Support\Operations\RecordMemo;
 use App\Models\AiJob;
-use App\Models\AiJobStep;
 use App\Models\DocumentVersion;
 use App\Models\Order;
 use App\Models\Payment;
@@ -38,13 +38,12 @@ final class OrderInsights
         return $job !== null && ! in_array($job->status, [AiJobStatus::Completed, AiJobStatus::Cancelled], true);
     }
 
+    /** PipelineDispatcher::retry() only retries a failed run or one waiting for manual review. */
     public static function canRetry(Order $order): bool
     {
         $job = self::latestJob($order);
 
-        return $job !== null
-            && (in_array($job->status, [AiJobStatus::Failed, AiJobStatus::ManualReview], true)
-                || in_array($order->status, [OrderStatus::ProcessingFailed, OrderStatus::ManualReview], true));
+        return $job !== null && in_array($job->status, [AiJobStatus::Failed, AiJobStatus::ManualReview], true);
     }
 
     public static function canPause(Order $order): bool
@@ -66,26 +65,28 @@ final class OrderInsights
     }
 
     /**
-     * Stages of the latest run whose most recent attempt failed.
+     * The stage "Skip failed step" may skip. PipelineDispatcher::skipStage()
+     * only skips the current stage of the latest run, never rendering, file
+     * QA or delivery, and not while a worker holds the run; the action is
+     * offered for runs that stopped (failed or handed to manual review).
      *
-     * @return array<string, string> stage value => label
+     * @return array<string, string> stage value => label (at most one entry)
      */
-    public static function failedStages(Order $order): array
+    public static function skippableStages(Order $order): array
     {
         $job = self::latestJob($order);
-        if (! $job || ! in_array($job->status, [AiJobStatus::Failed, AiJobStatus::ManualReview, AiJobStatus::Paused], true)) {
+        $stage = $job?->current_stage;
+
+        if (! $job
+            || ! $stage instanceof PipelineStage
+            || ! in_array($job->status, [AiJobStatus::Failed, AiJobStatus::ManualReview], true)
+            || in_array($stage, StagePlan::UNSKIPPABLE, true)
+            || StagePlan::after($job, $stage) === null
+            || $job->isLeased()) {
             return [];
         }
 
-        return $job->steps
-            ->groupBy(fn (AiJobStep $step) => $step->stage?->value)
-            ->map(fn (Collection $attempts) => $attempts->sortBy('id')->last())
-            ->filter(fn (AiJobStep $step) => $step->status === StepStatus::Failed && $step->stage instanceof PipelineStage)
-            ->sortBy(fn (AiJobStep $step) => $step->stage->position())
-            ->mapWithKeys(fn (AiJobStep $step) => [
-                $step->stage->value => $step->stage->getLabel().($step->stage->isRequired() ? ' (required stage)' : ''),
-            ])
-            ->all();
+        return [$stage->value => $stage->getLabel().($stage->isRequired() ? ' (required stage)' : '')];
     }
 
     public static function canRegenerate(Order $order): bool
@@ -112,19 +113,23 @@ final class OrderInsights
         return app(OrderStateMachine::class)->allowedFrom($order->status);
     }
 
-    /** The captured order payment refunds are taken from (as RefundService selects it). */
+    /**
+     * The captured order payment refunds are taken from (as RefundService
+     * selects it). Memoised for the request; the order page forgets it after
+     * every action.
+     */
     public static function capturedPayment(Order $order): ?Payment
     {
-        return $order->payments()
+        return RecordMemo::remember($order, 'captured-payment', fn (): ?Payment => $order->payments()
             ->where('purpose', 'order')
             ->whereIn('status', [PaymentRecordStatus::Success->value, PaymentRecordStatus::PartiallyRefunded->value])
             ->latest('id')
-            ->first();
+            ->first());
     }
 
     public static function refundableAmount(Order $order): int
     {
-        return self::capturedPayment($order)?->refundableAmount() ?? 0;
+        return RecordMemo::remember($order, 'refundable-amount', fn (): int => self::capturedPayment($order)?->refundableAmount() ?? 0);
     }
 
     public static function hasOpenRefund(Order $order): bool

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Orders\Schemas;
 
 use App\Enums\OrderStatus;
 use App\Enums\RefundStatus;
+use App\Filament\Resources\Orders\OrderInsights;
 use App\Filament\Support\Operations\Format;
 use App\Filament\Support\Operations\OrderStatusGroups;
 use App\Models\Order;
@@ -88,7 +89,7 @@ class OrderInfolist
 
     private static function attentionDescription(Order $record): string
     {
-        $job = $record->latestAiJob;
+        $job = OrderInsights::latestJob($record);
 
         return match ($record->status) {
             OrderStatus::ProcessingFailed => 'The AI pipeline stopped'

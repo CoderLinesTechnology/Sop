@@ -51,7 +51,7 @@
                     <div class="mt-3 flex flex-wrap items-center justify-end gap-2 text-[0.8rem]">
                         <span class="text-brand-700" x-show="price.promotion_label" x-text="price.promotion_label" x-cloak></span>
                         <span class="text-mint-ink" x-show="couponApplied()" x-cloak>Coupon <strong x-text="price.coupon_code"></strong>: −<span x-text="price.coupon_discount"></span></span>
-                        <span class="pill-save" x-show="price.savings_percent > 0">Save <span x-text="price.savings_percent">{{ $quote->savingsPercent() }}</span>%</span>
+                        <span class="pill-save" x-show="price.savings_percent > 0"><span>Save <span x-text="price.savings_percent">{{ $quote->savingsPercent() }}</span>%</span></span>
                     </div>
                 </div>
 

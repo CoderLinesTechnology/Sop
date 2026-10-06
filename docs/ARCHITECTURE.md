@@ -4,17 +4,24 @@
 
 Statementra is a Laravel 13 (PHP 8.3+) application on MySQL 8. The public site is
 server-rendered Blade + Tailwind CSS v4 with a few small Alpine.js (CSP build)
-components; the admin panel is Filament 5. Long-running work runs on Laravel
-queues (database driver by default) and the scheduler.
+components; the admin panel is Filament 5.
+
+**No queue worker and no cron are needed.** Everything runs inside ordinary web
+requests: slow work runs right after the response is sent, the AI pipeline
+continues stage by stage through signed requests the app makes to itself, and
+maintenance runs on a heartbeat driven by site traffic. This keeps the app
+deployable on shared hosting (see [Runtime](#runtime-no-queue-worker-no-cron)).
 
 ```
 Customer ──► Public site (Blade) ──► Draft order (FORM_SUBMITTED)
                                   ──► Checkout (server-side price) ──► Paystack
-Paystack ──► Webhook (HMAC-SHA512) ──► PaymentConfirmationService (verify API, row locks)
-                                  ──► PipelineDispatcher::startForOrder (idempotent)
-Queue worker ──► AI pipeline stages (OpenAI Responses API + web search)
-             ──► Document engine (DocumentModel ─► PDF + DOCX, file QA)
-             ──► DocumentDelivery (email with attachments) ──► DELIVERED
+Paystack ──► Webhook (HMAC-SHA512) ──► 200 at once, then PaymentConfirmationService
+                                      (verify API, row locks) ──► PipelineDispatcher::startForOrder
+After the response ──► PipelineWorker: AI stages (OpenAI Responses API + web search)
+   │                ──► Document engine (DocumentModel ─► PDF + DOCX, file QA)
+   │                ──► DocumentDelivery (email with attachments) ──► DELIVERED
+   └─ next stage in a fresh request: signed POST /internal/pipeline/{job} (SelfTrigger)
+Page views / status polling / uptime ping ──► Heartbeat: retries, reconciliation, retention
 ```
 
 ## Directory map
@@ -33,9 +40,10 @@ Queue worker ──► AI pipeline stages (OpenAI Responses API + web search)
 | `app/Domain/Documents` | Requirements & templates, `DocumentModel`, PDF/DOCX renderers, file QA |
 | `app/Domain/Notifications` | `AdminNotifier` (Filament database notifications + email + webhook) |
 | `app/Support` | `Settings` (admin settings, cached), `Money`, `Audit`, `SecurityLog`, `Analytics`, `SafeHttp` |
+| `app/Support/Runtime` | `AfterResponse`, `SelfTrigger`, `Heartbeat`: the request-driven runtime |
+| `app/Domain/Maintenance` | Heartbeat tasks: draft pruning, information-request reminders, retention purge, log pruning |
 | `app/Filament` | Admin panel resources, pages and widgets |
 | `app/Http` | Public controllers, middleware (`SecurityHeaders`, `AuthorizeOrderAccess`, ...) |
-| `app/Jobs` | Queue jobs (payments, email, extraction, pipeline stages) |
 
 ## Non-negotiable rules
 
@@ -72,21 +80,41 @@ Queue worker ──► AI pipeline stages (OpenAI Responses API + web search)
 - Revisions: `RevisionService::request()` / `begin()` → `PipelineDispatcher::startRevision()`.
 - Admin overrides: `PipelineDispatcher` (pause/resume/retry/skip/cancel/regenerate), `DocumentAdminOperations`, `DocumentDelivery::resend()`, `RefundService`, `InformationRequestService`, `OrderStateMachine` (force with reason), `OrderAccess::rotate()`.
 
-## Queues
+## Runtime (no queue worker, no cron)
 
-| Queue | Connection | Jobs |
-| --- | --- | --- |
-| `payments` | database | webhook processing, reconciliation |
-| `emails` | database | `SendEmailMessage` (5 tries, exponential backoff) |
-| `default` | database | text extraction, misc |
-| `ai` | database-long (retry_after 960s) | pipeline stages |
+Many hosts (shared hosting in particular) cannot keep a queue worker running or
+run cron reliably, so Statementra does not depend on either. `QUEUE_CONNECTION`
+is `sync` and the codebase contains no queued jobs.
 
-Run workers with `php artisan queue:work database --queue=payments,emails,default` and
-`php artisan queue:work database-long --queue=ai --timeout=900`.
+| Need | How it runs |
+| --- | --- |
+| Slow work triggered by a request (emails, upload text extraction, webhook processing, admin alerts) | `AfterResponse::run($label, fn () => ...)`: Laravel `defer()` with `ignore_user_abort` and a time limit. PHP-FPM / LiteSpeed release the visitor's connection first. In console and tests it runs at once (after the surrounding transaction commits). |
+| The AI pipeline (minutes of work) | `PipelineDispatcher::kick()` runs stages after the response; when its time budget is spent the worker calls `SelfTrigger::fire('internal.pipeline.continue')`, an HMAC-signed POST to the app itself, so the next stage gets a fresh PHP request. Jobs are claimed with a lease (`ai_jobs.leased_until`), retries wait in `ai_jobs.next_run_at`. The customer's status-page polling calls `kickIfDue()`. |
+| Retries and safety nets (payment events, emails, extraction, reconciliation, stalled pipelines, paid orders not yet started) | Heartbeat tasks |
+| Housekeeping (draft pruning, information-request reminders/expiry, retention purge, log pruning) | Heartbeat tasks |
+
+**Heartbeat.** `App\Support\Runtime\Heartbeat` runs the tasks listed in
+`config('statementra.runtime.tasks')` (`name => [interval seconds, invokable class]`).
+A beat happens after ordinary page views (at most once a minute, after the
+response), whenever `GET /system/heartbeat/{token}` is called (point any free
+uptime monitor at it for quiet sites; the token is in the admin settings), or by
+hand with `php artisan statementra:heartbeat`. Each task is claimed with a
+conditional update on its `system_tasks` row, so it runs at most once per
+interval even when beats overlap; a beat stops starting tasks after its time
+budget (25 s) and the rest run next time. `system_tasks` records the last run,
+status and error of every task.
+
+**Writing new background work.** Persist the intent first (a row with a status),
+then call `AfterResponse::run()` to do it now, and add or extend a heartbeat task
+that picks up rows whose attempt never finished. Claim work with a conditional
+`UPDATE ... WHERE status = ...` so overlapping requests cannot do it twice.
+Never implement `ShouldQueue`, dispatch jobs or use `Mail::queue()`.
 
 ## Testing
 
 Pest 4 against MySQL (`phpunit.xml`). Run a suite on its own database with
 `DB_DATABASE=statementra_test_x ./vendor/bin/pest tests/Feature/X`. Helpers in `tests/Pest.php`
 (`actingAsAdmin(AdminRole)`). External services are faked: `Http::fake()` for Paystack/OpenAI,
-`AI_PROVIDER=fake`, `Storage::fake()`, `Mail::fake()` / `Queue::fake()`.
+`AI_PROVIDER=fake`, per-process fake `private`/`public` disks (set up in `tests/Pest.php`),
+`Mail::fake()`. After-response work runs inline in tests; use `$this->travel()` to test
+retries and heartbeat intervals.

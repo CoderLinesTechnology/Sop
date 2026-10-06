@@ -5,6 +5,7 @@ namespace App\Domain\Email;
 use App\Domain\Orders\OrderAccess;
 use App\Models\Order;
 use App\Support\Money;
+use App\Support\Settings;
 
 /** Common template variables for order emails. */
 final class OrderEmailVariables
@@ -21,7 +22,7 @@ final class OrderEmailVariables
             'institution' => $order->institution ?: 'your chosen institution',
             'programme' => $order->programme ?: 'your application',
             'order_link' => OrderAccess::statusUrl($order),
-            'delivery_time' => 'about '.\App\Support\Settings::formatMinutesRange($min, $max),
+            'delivery_time' => 'about '.Settings::formatMinutesRange($min, $max),
             'amount_paid' => Money::format($order->total_amount, $order->currency),
         ];
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Site;
 use App\Domain\Catalogue\Catalogue;
 use App\Http\Controllers\Controller;
 use App\Support\Seo;
+use App\Support\Settings;
 use Illuminate\View\View;
 
 class HomeController extends Controller
@@ -22,7 +23,7 @@ class HomeController extends Controller
             ->withJsonLd(Seo::organization())
             ->withJsonLd([
                 '@type' => 'WebSite',
-                'name' => \App\Support\Settings::siteName(),
+                'name' => Settings::siteName(),
                 'url' => url('/'),
             ])
             ->withFaqs($faqs);

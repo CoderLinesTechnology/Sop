@@ -8,10 +8,12 @@ use App\Domain\Orders\CheckoutSession;
 use App\Domain\Orders\DraftOrderService;
 use App\Domain\Orders\OrderForm;
 use App\Domain\Pricing\PriceCalculator;
+use App\Enums\FieldType;
 use App\Http\Controllers\Controller;
 use App\Models\AnalyticsEvent;
 use App\Models\Order;
 use App\Models\Service;
+use App\Models\UploadedFile;
 use App\Support\Analytics;
 use App\Support\Countries;
 use App\Support\Seo;
@@ -87,7 +89,10 @@ class ApplicationController extends Controller
         $service = Service::query()->active()->where('slug', $slug)->with('activeFields')->firstOrFail();
 
         if (SpamGuard::isBot($request)) {
-            return redirect()->route('order.start', $slug);
+            // Keep what was typed: a real person who autofilled quickly simply submits again.
+            return redirect()->route('order.start', $slug)
+                ->withInput($request->except(['website', '_started', '_token']))
+                ->with('status', 'Please review your details and press Continue to Review again.');
         }
 
         $form = new OrderForm($service);
@@ -110,7 +115,7 @@ class ApplicationController extends Controller
         $answers = (array) $request->input('answers', []);
 
         // Phone numbers are entered as dial code + number.
-        foreach ($form->inputFields()->where('type', \App\Enums\FieldType::Phone) as $field) {
+        foreach ($form->inputFields()->where('type', FieldType::Phone) as $field) {
             $number = trim((string) ($answers[$field->key] ?? ''));
             $dial = Countries::DIAL_CODES[strtoupper((string) $request->input('dial_code.'.$field->key))][1] ?? null;
             if ($number !== '' && $dial && ! str_starts_with($number, '+')) {
@@ -148,7 +153,7 @@ class ApplicationController extends Controller
     /** @return list<string> slots (file field keys) that have at least one file */
     private function uploadedSlots(Request $request, array $uploadIds, ?Order $editing): array
     {
-        $files = \App\Models\UploadedFile::query()
+        $files = UploadedFile::query()
             ->whereIn('uuid', $uploadIds)
             ->where('draft_token_hash', CheckoutSession::existingHash($request))
             ->pluck('field_key')

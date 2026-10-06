@@ -7,6 +7,7 @@ use App\Mail\AdminAlertMail;
 use App\Models\AdminUser;
 use App\Models\Order;
 use App\Support\AdminUrls;
+use App\Support\Runtime\AfterResponse;
 use App\Support\Settings;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -124,12 +125,15 @@ class AdminNotifier
         }
 
         if ($email && in_array($level, ['warning', 'danger'], true)) {
+            $url = $order ? AdminUrls::order($order) : null;
             foreach (Settings::adminNotificationEmails() as $address) {
-                try {
-                    Mail::to($address)->queue(new AdminAlertMail($title, $body, $order ? AdminUrls::order($order) : null));
-                } catch (Throwable $e) {
-                    Log::error('Admin alert email failed', ['event' => $event, 'error' => $e->getMessage()]);
-                }
+                AfterResponse::run('admin-alert:'.$event.':'.$address, function () use ($address, $title, $body, $url, $event) {
+                    try {
+                        Mail::to($address)->send(new AdminAlertMail($title, $body, $url));
+                    } catch (Throwable $e) {
+                        Log::error('Admin alert email failed', ['event' => $event, 'error' => $e->getMessage()]);
+                    }
+                }, timeLimitSeconds: 60);
             }
         }
 

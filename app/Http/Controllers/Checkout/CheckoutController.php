@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Checkout;
 
 use App\Domain\Orders\CheckoutSession;
 use App\Domain\Orders\OrderAccess;
+use App\Domain\Orders\OrderForm;
 use App\Domain\Payments\CheckoutException;
 use App\Domain\Payments\CheckoutService;
 use App\Domain\Payments\ConfirmationOutcome;
@@ -11,15 +12,20 @@ use App\Domain\Payments\PaymentConfirmationService;
 use App\Domain\Payments\Paystack\PaystackException;
 use App\Domain\Pricing\PriceCalculator;
 use App\Enums\FieldSection;
+use App\Enums\FieldType;
 use App\Http\Controllers\Controller;
+use App\Models\AnalyticsEvent;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Support\Analytics;
 use App\Support\Countries;
-use App\Support\Seo;
 use App\Support\SecurityLog;
+use App\Support\Seo;
+use App\Support\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
@@ -87,7 +93,7 @@ class CheckoutController extends Controller
         ]);
 
         $key = 'coupon-failures:'.$request->ip();
-        if (RateLimiter::tooManyAttempts($key, (int) \App\Support\Settings::get('security.rate_limit_coupon_attempts_per_hour', 15))) {
+        if (RateLimiter::tooManyAttempts($key, (int) Settings::get('security.rate_limit_coupon_attempts_per_hour', 15))) {
             return response()->json(['message' => 'Too many coupon attempts. Please try again later.'], 429);
         }
 
@@ -103,7 +109,7 @@ class CheckoutController extends Controller
             } else {
                 $request->session()->put('checkout.coupon', $quote->couponCode ?? $data['coupon']);
                 if ($quote->couponApplied()) {
-                    \App\Support\Analytics::record(\App\Models\AnalyticsEvent::COUPON_APPLIED, $request, ['service_id' => $order->service_id, 'order_id' => $order->id]);
+                    Analytics::record(AnalyticsEvent::COUPON_APPLIED, $request, ['service_id' => $order->service_id, 'order_id' => $order->id]);
                 }
             }
         } else {
@@ -229,18 +235,32 @@ class CheckoutController extends Controller
     /** @return array<string, array{title:string, icon:string, items:list<array{label:string,value:string}>}> */
     private function answerSections(Order $order): array
     {
+        // Follow the form's field order and show option labels, not stored values.
+        $fields = (new OrderForm($order->service))->inputFields()->keyBy('key');
+        $position = $fields->keys()->flip();
+        $answers = $order->answers->sortBy(fn ($answer) => $position[$answer->field_key] ?? PHP_INT_MAX)->values();
+
         $sections = [];
-        foreach ($order->answers as $answer) {
+        foreach ($answers as $answer) {
             $section = $answer->section instanceof FieldSection ? $answer->section : FieldSection::Additional;
             $key = in_array($section, [FieldSection::Story, FieldSection::Additional], true) ? 'additional' : $section->value;
             $sections[$key] ??= ['title' => $section->reviewTitle(), 'icon' => $section->icon(), 'anchor' => $section->value, 'items' => []];
 
             $value = $answer->type === 'country' ? (Countries::name((string) $answer->value) ?? $answer->displayValue()) : $answer->displayValue();
             if ($answer->type === 'date' && $answer->value) {
-                $value = \Illuminate\Support\Carbon::parse($answer->value)->format('j F Y');
+                $value = Carbon::parse($answer->value)->format('j F Y');
             }
 
-            $sections[$key]['items'][] = ['label' => $answer->label, 'value' => $value, 'long' => mb_strlen($value) > 80];
+            $choices = $fields->get($answer->field_key)?->choices() ?? [];
+            if ($choices !== []) {
+                $value = implode(', ', array_map(fn ($v) => $choices[(string) $v] ?? (string) $v, (array) $answer->value));
+            }
+
+            $sections[$key]['items'][] = [
+                'label' => $answer->label,
+                'value' => $value,
+                'long' => $answer->type === FieldType::Textarea->value || mb_strlen($value) > 80,
+            ];
         }
 
         // Display order: personal, application, additional.

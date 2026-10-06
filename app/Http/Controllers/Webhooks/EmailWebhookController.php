@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Webhooks;
 
+use App\Domain\Delivery\DocumentDelivery;
 use App\Enums\EmailStatus;
 use App\Http\Controllers\Controller;
 use App\Models\EmailEvent;
@@ -64,7 +65,7 @@ class EmailWebhookController extends Controller
                 ]))->save();
 
                 if ($status === EmailStatus::Bounced && data_get($email->meta, 'purpose') === 'delivery') {
-                    app(\App\Domain\Delivery\DocumentDelivery::class)->markFailed($email, 'The email provider reported a bounce.');
+                    app(DocumentDelivery::class)->markFailed($email, 'The email provider reported a bounce.');
                 }
             }
         }

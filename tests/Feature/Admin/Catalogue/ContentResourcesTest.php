@@ -2,6 +2,7 @@
 
 use App\Enums\AdminRole;
 use App\Filament\Pages\Settings as SettingsPage;
+use App\Filament\Resources\AdminUsers\AdminUserResource;
 use App\Filament\Resources\ArticleCategories\ArticleCategoryResource;
 use App\Filament\Resources\ArticleCategories\Pages\ManageArticleCategories;
 use App\Filament\Resources\Articles\ArticleResource;
@@ -13,6 +14,7 @@ use App\Filament\Resources\Pages\PageResource;
 use App\Filament\Resources\Pages\Pages\CreatePage;
 use App\Filament\Resources\Pages\Pages\EditPage;
 use App\Filament\Resources\Pages\Pages\ListPages;
+use App\Filament\Resources\PromptVersions\PromptVersionResource;
 use App\Filament\Resources\Testimonials\Pages\ManageTestimonials;
 use App\Filament\Resources\Testimonials\TestimonialResource;
 use App\Models\Article;
@@ -235,8 +237,8 @@ it('keeps content admins out of prices, settings and system screens', function (
     $this->withoutVite();
 
     $this->get(SettingsPage::getUrl())->assertForbidden();
-    $this->get(\App\Filament\Resources\AdminUsers\AdminUserResource::getUrl('index'))->assertForbidden();
-    $this->get(\App\Filament\Resources\PromptVersions\PromptVersionResource::getUrl('index'))->assertForbidden();
+    $this->get(AdminUserResource::getUrl('index'))->assertForbidden();
+    $this->get(PromptVersionResource::getUrl('index'))->assertForbidden();
 });
 
 it('keeps finance admins out of website content', function () {

@@ -1,12 +1,15 @@
 <?php
 
 use App\Http\Middleware\AuthorizeOrderAccess;
+use App\Http\Middleware\RunHeartbeat;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrackPageView;
+use App\Http\Middleware\VerifySelfTrigger;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -14,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: fn () => Route::group([], __DIR__.'/../routes/internal.php'),
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Behind a load balancer / CDN (e.g. Cloudflare) the client IP and scheme come from forwarded headers.
@@ -25,12 +29,16 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->append(SecurityHeaders::class);
 
+        // No cron needed: page views drive the maintenance heartbeat (after the response is sent).
+        $middleware->appendToGroup('web', RunHeartbeat::class);
+
         // Webhooks are authenticated by provider signatures instead of CSRF tokens.
         $middleware->validateCsrfTokens(except: ['webhooks/*', 'beacon']);
 
         $middleware->alias([
             'order.access' => AuthorizeOrderAccess::class,
             'track' => TrackPageView::class,
+            'runtime.signed' => VerifySelfTrigger::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

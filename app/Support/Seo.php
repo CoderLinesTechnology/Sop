@@ -2,6 +2,10 @@
 
 namespace App\Support;
 
+use App\Models\Faq;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
 /**
  * SEO metadata for a page: title, description, canonical URL, social image,
  * robots directive and structured data (JSON-LD).
@@ -57,7 +61,7 @@ final class Seo
             return asset('images/home/hero.webp');
         }
 
-        return str_starts_with($image, 'http') ? $image : (str_starts_with($image, 'images/') ? asset($image) : \Illuminate\Support\Facades\Storage::disk(config('statementra.storage.public_disk', 'public'))->url($image));
+        return str_starts_with($image, 'http') ? $image : (str_starts_with($image, 'images/') ? asset($image) : Storage::disk(config('statementra.storage.public_disk', 'public'))->url($image));
     }
 
     public static function organization(): array
@@ -94,7 +98,7 @@ final class Seo
         ]);
     }
 
-    /** @param iterable<\App\Models\Faq> $faqs */
+    /** @param iterable<Faq> $faqs */
     public function withFaqs(iterable $faqs): self
     {
         $items = [];
@@ -102,7 +106,7 @@ final class Seo
             $items[] = [
                 '@type' => 'Question',
                 'name' => $faq->question,
-                'acceptedAnswer' => ['@type' => 'Answer', 'text' => strip_tags((string) \Illuminate\Support\Str::markdown($faq->answer, ['html_input' => 'strip']))],
+                'acceptedAnswer' => ['@type' => 'Answer', 'text' => strip_tags((string) Str::markdown($faq->answer, ['html_input' => 'strip']))],
             ];
         }
 

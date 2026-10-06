@@ -7,14 +7,23 @@ use App\Domain\Payments\Paystack\MockPaystackGateway;
 use App\Domain\Payments\Paystack\PaystackClient;
 use App\Domain\Payments\Paystack\PaystackGateway;
 use App\Domain\Pricing\PromotionResolver;
+use App\Models\Article;
+use App\Models\ArticleCategory;
+use App\Models\Faq;
+use App\Models\Page;
+use App\Models\Promotion;
+use App\Models\Service;
+use App\Models\ServiceField;
+use App\Models\Testimonial;
 use App\Support\SecurityLog;
 use App\Support\Settings;
+use App\View\Composers\SiteLayoutComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use RuntimeException;
@@ -53,16 +62,22 @@ class AppServiceProvider extends ServiceProvider
 
         $this->configureRateLimiting();
 
-        View::composer('components.layouts.site', \App\View\Composers\SiteLayoutComposer::class);
+        View::composer('components.layouts.site', SiteLayoutComposer::class);
 
         // Admin edits to public content are visible immediately.
         foreach ([
-            \App\Models\Service::class, \App\Models\ServiceField::class, \App\Models\Page::class, \App\Models\Faq::class,
-            \App\Models\Article::class, \App\Models\ArticleCategory::class, \App\Models\Testimonial::class, \App\Models\Promotion::class,
+            Service::class, ServiceField::class, Page::class, Faq::class,
+            Article::class, ArticleCategory::class, Testimonial::class, Promotion::class,
         ] as $model) {
             $model::saved(fn () => Catalogue::flush());
             $model::deleted(fn () => Catalogue::flush());
         }
+
+        // Custom pages are cached under their slug; forget the old slug after a rename too.
+        $forgetPage = fn (Page $page) => collect([$page->slug, $page->getOriginal('slug')])
+            ->filter()->unique()->each(fn (string $slug) => Catalogue::forgetPage($slug));
+        Page::saved($forgetPage);
+        Page::deleted($forgetPage);
     }
 
     private function configureRateLimiting(): void

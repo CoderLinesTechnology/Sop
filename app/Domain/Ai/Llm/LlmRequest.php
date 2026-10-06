@@ -36,6 +36,7 @@ final class LlmRequest
         public readonly string $promptKey = '',
         public readonly string $stage = '',
         public readonly array $context = [],
+        public readonly string $task = '',
     ) {}
 
     public function withMaxOutputTokens(int $tokens): self

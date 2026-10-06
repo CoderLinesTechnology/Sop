@@ -6,7 +6,9 @@ use App\Domain\Ai\Pipeline\StageContext;
 use App\Domain\Ai\Prompts\PromptRenderer;
 use App\Domain\Ai\Prompts\PromptRepository;
 use App\Domain\Ai\Prompts\ResolvedPrompt;
+use App\Domain\Ai\Prompts\Schemas;
 use App\Domain\Ai\Prompts\UntrustedData;
+use App\Domain\Ai\Research\UrlNormalizer;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -45,19 +47,21 @@ class LlmGateway
      */
     public function call(StageContext $ctx, LlmCall $call): LlmResult
     {
-        $prompt = $this->prompts->resolve($ctx->job, $call->promptKey);
+        $promptKey = $this->promptKey($ctx, $call);
+        $schema = Schemas::for($call->task);
+        $prompt = $this->prompts->resolve($ctx->job, $promptKey);
         $model = $this->model($ctx, $call, $prompt);
         $boundary = UntrustedData::boundary();
 
         $renderer = new PromptRenderer;
         $userText = $renderer->render($prompt->userTemplate, $call->variables, $boundary);
-        $this->reportRendering($ctx, $call->promptKey, $renderer);
+        $this->reportRendering($ctx, $promptKey, $renderer);
 
         $request = new LlmRequest(
             model: $model,
             instructions: trim($prompt->systemPrompt)."\n\n".UntrustedData::securityNote($boundary),
             input: [['role' => 'user', 'content' => $this->content($userText, $call->attachments, $boundary)]],
-            schema: $call->schema,
+            schema: $schema,
             reasoningEffort: $call->reasoningEffort ?? $ctx->stageConfig('reasoning_effort') ?? $prompt->version?->reasoning_effort,
             maxOutputTokens: $call->maxOutputTokens ?? (int) $ctx->stageConfig('max_output_tokens', 16000),
             tools: [],
@@ -66,15 +70,16 @@ class LlmGateway
                 'app' => 'statementra',
                 'job' => (string) $ctx->job->uuid,
                 'stage' => $ctx->stage->value,
-                'prompt_key' => $call->promptKey,
+                'prompt_key' => $promptKey,
                 'prompt_version' => $prompt->versionLabel(),
                 'attempt' => (string) $ctx->step->attempt,
                 'pass' => $call->label,
             ], fn ($v) => $v !== ''),
             store: (bool) config('statementra.ai.store_responses', false),
-            promptKey: $call->promptKey,
+            promptKey: $promptKey,
             stage: $ctx->stage->value,
             context: $call->context,
+            task: $call->task,
         );
 
         if ($call->webSearch !== null) {
@@ -82,23 +87,21 @@ class LlmGateway
         }
 
         $response = $this->send($ctx, $request, $prompt, $model);
-        $decoded = $this->decode($response, $call->schema);
+        $decoded = $this->decode($response, $schema);
 
         if (is_string($decoded)) {
             Log::notice('Structured output invalid; re-asking once with a repair instruction.', [
-                'job' => $ctx->job->uuid, 'stage' => $ctx->stage->value, 'prompt_key' => $call->promptKey, 'errors' => $decoded,
+                'job' => $ctx->job->uuid, 'stage' => $ctx->stage->value, 'prompt_key' => $promptKey, 'errors' => $decoded,
             ]);
 
-            $repair = $request->withAppendedUserText($this->repairInstruction($call->schema['name'], $decoded, $response->text, $boundary));
+            $repair = $request->withAppendedUserText($this->repairInstruction($schema['name'], $decoded, $response->text, $boundary));
             $response = $this->send($ctx, $repair, $prompt, $model);
-            $decoded = $this->decode($response, $call->schema);
+            $decoded = $this->decode($response, $schema);
 
             if (is_string($decoded)) {
-                throw LlmException::invalidOutput("{$call->promptKey}: {$decoded}", $response);
+                throw LlmException::invalidOutput("{$promptKey}: {$decoded}", $response);
             }
         }
-
-        $this->flagPersonalSearchQueries($ctx, $response);
 
         return new LlmResult($decoded, $response, $prompt->version, $model);
     }
@@ -126,6 +129,7 @@ class LlmGateway
             default => 'error',
         };
         $this->usage->record($ctx, $provider->name(), $model, $prompt->version, $response, $status, $status === 'error' ? 'response_'.$response->status : null, $this->elapsed($started));
+        $this->flagPersonalSearchQueries($ctx, $response);
 
         if ($response->isIncomplete()) {
             if ($response->incompleteReason === 'max_output_tokens' && ! $grown) {
@@ -181,6 +185,20 @@ class LlmGateway
             .'Respond again with one complete JSON object that strictly matches the schema: include every required property, use null where a value is unknown, use only the allowed enum values, and add no extra properties, markdown or commentary. Do not change the substance of your answer beyond fixing these problems.';
     }
 
+    /** The workflow's prompt key for this task in this stage (defaults to the task name). */
+    private function promptKey(StageContext $ctx, LlmCall $call): string
+    {
+        if ($call->promptKey) {
+            return $call->promptKey;
+        }
+
+        $configured = $call->task === $ctx->stage->value
+            ? $ctx->stageConfig('prompt_key')
+            : $ctx->stageConfig("prompt_keys.{$call->task}");
+
+        return is_string($configured) && $configured !== '' ? $configured : $call->task;
+    }
+
     private function model(StageContext $ctx, LlmCall $call, ResolvedPrompt $prompt): string
     {
         return (string) ($call->model
@@ -212,7 +230,7 @@ class LlmGateway
         $tool = ['type' => 'web_search'];
 
         $domains = array_values(array_unique(array_filter(array_map(
-            fn ($d) => \App\Domain\Ai\Research\UrlNormalizer::bareDomain((string) $d),
+            fn ($d) => UrlNormalizer::bareDomain((string) $d),
             (array) ($search['allowed_domains'] ?? []),
         ))));
         if ($domains !== []) {
@@ -247,6 +265,7 @@ class LlmGateway
             promptKey: $request->promptKey,
             stage: $request->stage,
             context: $request->context,
+            task: $request->task,
         );
     }
 

@@ -15,8 +15,11 @@ use App\Enums\PipelineStage;
 final class StageResult
 {
     public const COMPLETED = 'completed';
+
     public const WAITING = 'waiting';
+
     public const MANUAL_REVIEW = 'manual_review';
+
     public const FINISHED = 'finished';
 
     private function __construct(

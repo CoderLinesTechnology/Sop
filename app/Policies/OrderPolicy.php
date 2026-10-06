@@ -58,10 +58,21 @@ class OrderPolicy
         return false;
     }
 
-    /** Pipeline controls, status changes, information requests, link rotation. */
+    /** Status changes, information requests, customer-link rotation. */
     public function manage(AdminUser $admin, Order $order): bool
     {
         return $admin->checkPermissionTo(Permission::OrdersManage, 'admin');
+    }
+
+    /**
+     * Pipeline controls (start, retry, pause, resume, skip a failed step,
+     * cancel, regenerate): operations, and AI administrators who are alerted
+     * about AI failures.
+     */
+    public function controlPipeline(AdminUser $admin, Order $order): bool
+    {
+        return $admin->checkPermissionTo(Permission::OrdersManage, 'admin')
+            || $admin->checkPermissionTo(Permission::AiManage, 'admin');
     }
 
     /** Force any status transition (with a mandatory reason). */

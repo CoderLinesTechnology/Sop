@@ -1,296 +1,292 @@
 {
- "images/articles/application-tips.jpg": {
-  "width": 800,
-  "height": 394,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/articles/application-tips-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/articles/application-tips-768.webp"
-   },
-   {
+  "images/articles/application-tips.jpg": {
     "width": 800,
-    "path": "images/articles/application-tips.webp"
-   }
-  ]
- },
- "images/articles/common-mistakes.jpg": {
-  "width": 800,
-  "height": 398,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/articles/common-mistakes-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/articles/common-mistakes-768.webp"
-   },
-   {
+    "height": 394,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/articles/application-tips-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/articles/application-tips-768.webp"
+      },
+      {
+        "width": 800,
+        "path": "images/articles/application-tips.webp"
+      }
+    ]
+  },
+  "images/articles/common-mistakes.jpg": {
     "width": 800,
-    "path": "images/articles/common-mistakes.webp"
-   }
-  ]
- },
- "images/articles/cv.jpg": {
-  "width": 800,
-  "height": 394,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/articles/cv-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/articles/cv-768.webp"
-   },
-   {
+    "height": 398,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/articles/common-mistakes-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/articles/common-mistakes-768.webp"
+      },
+      {
+        "width": 800,
+        "path": "images/articles/common-mistakes.webp"
+      }
+    ]
+  },
+  "images/articles/cv.jpg": {
     "width": 800,
-    "path": "images/articles/cv.webp"
-   }
-  ]
- },
- "images/articles/motivation-letter.jpg": {
-  "width": 800,
-  "height": 376,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/articles/motivation-letter-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/articles/motivation-letter-768.webp"
-   },
-   {
+    "height": 394,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/articles/cv-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/articles/cv-768.webp"
+      },
+      {
+        "width": 800,
+        "path": "images/articles/cv.webp"
+      }
+    ]
+  },
+  "images/articles/motivation-letter.jpg": {
     "width": 800,
-    "path": "images/articles/motivation-letter.webp"
-   }
-  ]
- },
- "images/articles/personal-statement.jpg": {
-  "width": 800,
-  "height": 382,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/articles/personal-statement-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/articles/personal-statement-768.webp"
-   },
-   {
+    "height": 376,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/articles/motivation-letter-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/articles/motivation-letter-768.webp"
+      },
+      {
+        "width": 800,
+        "path": "images/articles/motivation-letter.webp"
+      }
+    ]
+  },
+  "images/articles/personal-statement.jpg": {
     "width": 800,
-    "path": "images/articles/personal-statement.webp"
-   }
-  ]
- },
- "images/articles/scholarship-essay.jpg": {
-  "width": 800,
-  "height": 384,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/articles/scholarship-essay-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/articles/scholarship-essay-768.webp"
-   },
-   {
+    "height": 382,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/articles/personal-statement-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/articles/personal-statement-768.webp"
+      },
+      {
+        "width": 800,
+        "path": "images/articles/personal-statement.webp"
+      }
+    ]
+  },
+  "images/articles/scholarship-essay.jpg": {
     "width": 800,
-    "path": "images/articles/scholarship-essay.webp"
-   }
-  ]
- },
- "images/articles/statement-of-purpose.jpg": {
-  "width": 800,
-  "height": 376,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/articles/statement-of-purpose-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/articles/statement-of-purpose-768.webp"
-   },
-   {
+    "height": 384,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/articles/scholarship-essay-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/articles/scholarship-essay-768.webp"
+      },
+      {
+        "width": 800,
+        "path": "images/articles/scholarship-essay.webp"
+      }
+    ]
+  },
+  "images/articles/statement-of-purpose.jpg": {
     "width": 800,
-    "path": "images/articles/statement-of-purpose.webp"
-   }
-  ]
- },
- "images/articles/study-abroad.jpg": {
-  "width": 800,
-  "height": 392,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/articles/study-abroad-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/articles/study-abroad-768.webp"
-   },
-   {
+    "height": 376,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/articles/statement-of-purpose-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/articles/statement-of-purpose-768.webp"
+      },
+      {
+        "width": 800,
+        "path": "images/articles/statement-of-purpose.webp"
+      }
+    ]
+  },
+  "images/articles/study-abroad.jpg": {
     "width": 800,
-    "path": "images/articles/study-abroad.webp"
-   }
-  ]
- },
- "images/home/cta.jpg": {
-  "width": 1600,
-  "height": 128,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/home/cta-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/home/cta-768.webp"
-   },
-   {
-    "width": 1080,
-    "path": "images/home/cta-1080.webp"
-   },
-   {
-    "width": 1440,
-    "path": "images/home/cta-1440.webp"
-   },
-   {
+    "height": 392,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/articles/study-abroad-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/articles/study-abroad-768.webp"
+      },
+      {
+        "width": 800,
+        "path": "images/articles/study-abroad.webp"
+      }
+    ]
+  },
+  "images/home/cta.jpg": {
     "width": 1600,
-    "path": "images/home/cta.webp"
-   }
-  ]
- },
- "images/home/hero.jpg": {
-  "width": 1200,
-  "height": 737,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/home/hero-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/home/hero-768.webp"
-   },
-   {
-    "width": 1080,
-    "path": "images/home/hero-1080.webp"
-   },
-   {
+    "height": 128,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/home/cta-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/home/cta-768.webp"
+      },
+      {
+        "width": 1080,
+        "path": "images/home/cta-1080.webp"
+      },
+      {
+        "width": 1440,
+        "path": "images/home/cta-1440.webp"
+      },
+      {
+        "width": 1600,
+        "path": "images/home/cta.webp"
+      }
+    ]
+  },
+  "images/home/hero.jpg": {
     "width": 1200,
-    "path": "images/home/hero.webp"
-   }
-  ]
- },
- "images/home/research.jpg": {
-  "width": 1000,
-  "height": 450,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/home/research-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/home/research-768.webp"
-   },
-   {
-    "width": 1000,
-    "path": "images/home/research.webp"
-   }
-  ]
- },
- "images/people/testimonial.jpg": {
-  "width": 700,
-  "height": 798,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/people/testimonial-480.webp"
-   },
-   {
+    "height": 737,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/home/hero-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/home/hero-768.webp"
+      },
+      {
+        "width": 1080,
+        "path": "images/home/hero-1080.webp"
+      },
+      {
+        "width": 1200,
+        "path": "images/home/hero.webp"
+      }
+    ]
+  },
+  "images/home/research.jpg": {
+    "width": 712,
+    "height": 400,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/home/research-480.webp"
+      },
+      {
+        "width": 712,
+        "path": "images/home/research.webp"
+      }
+    ]
+  },
+  "images/people/testimonial.jpg": {
     "width": 700,
-    "path": "images/people/testimonial.webp"
-   }
-  ]
- },
- "images/resources/cta.jpg": {
-  "width": 1600,
-  "height": 161,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/resources/cta-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/resources/cta-768.webp"
-   },
-   {
-    "width": 1080,
-    "path": "images/resources/cta-1080.webp"
-   },
-   {
-    "width": 1440,
-    "path": "images/resources/cta-1440.webp"
-   },
-   {
+    "height": 798,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/people/testimonial-480.webp"
+      },
+      {
+        "width": 700,
+        "path": "images/people/testimonial.webp"
+      }
+    ]
+  },
+  "images/resources/cta.jpg": {
     "width": 1600,
-    "path": "images/resources/cta.webp"
-   }
-  ]
- },
- "images/resources/hero.jpg": {
-  "width": 1200,
-  "height": 562,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/resources/hero-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/resources/hero-768.webp"
-   },
-   {
-    "width": 1080,
-    "path": "images/resources/hero-1080.webp"
-   },
-   {
+    "height": 161,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/resources/cta-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/resources/cta-768.webp"
+      },
+      {
+        "width": 1080,
+        "path": "images/resources/cta-1080.webp"
+      },
+      {
+        "width": 1440,
+        "path": "images/resources/cta-1440.webp"
+      },
+      {
+        "width": 1600,
+        "path": "images/resources/cta.webp"
+      }
+    ]
+  },
+  "images/resources/hero.jpg": {
     "width": 1200,
-    "path": "images/resources/hero.webp"
-   }
-  ]
- },
- "images/services/hero.jpg": {
-  "width": 1200,
-  "height": 694,
-  "variants": [
-   {
-    "width": 480,
-    "path": "images/services/hero-480.webp"
-   },
-   {
-    "width": 768,
-    "path": "images/services/hero-768.webp"
-   },
-   {
-    "width": 1080,
-    "path": "images/services/hero-1080.webp"
-   },
-   {
+    "height": 562,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/resources/hero-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/resources/hero-768.webp"
+      },
+      {
+        "width": 1080,
+        "path": "images/resources/hero-1080.webp"
+      },
+      {
+        "width": 1200,
+        "path": "images/resources/hero.webp"
+      }
+    ]
+  },
+  "images/services/hero.jpg": {
     "width": 1200,
-    "path": "images/services/hero.webp"
-   }
-  ]
- }
+    "height": 694,
+    "variants": [
+      {
+        "width": 480,
+        "path": "images/services/hero-480.webp"
+      },
+      {
+        "width": 768,
+        "path": "images/services/hero-768.webp"
+      },
+      {
+        "width": 1080,
+        "path": "images/services/hero-1080.webp"
+      },
+      {
+        "width": 1200,
+        "path": "images/services/hero.webp"
+      }
+    ]
+  }
 }

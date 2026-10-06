@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Coupon;
 use App\Models\Promotion;
+use App\Models\Service;
 use App\Models\Testimonial;
 use Illuminate\Database\Seeder;
 
@@ -38,7 +39,7 @@ class DemoSeeder extends Seeder
         ] as $coupon) {
             $model = Coupon::query()->firstOrCreate(['code' => $coupon['code']], $coupon + ['is_active' => true]);
             if ($coupon['code'] === 'SCHOLAR20' && $model->wasRecentlyCreated) {
-                $model->services()->sync(\App\Models\Service::query()->where('slug', 'scholarship-essay')->pluck('id'));
+                $model->services()->sync(Service::query()->where('slug', 'scholarship-essay')->pluck('id'));
             }
         }
 

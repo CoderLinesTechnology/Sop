@@ -10,10 +10,12 @@ class ListRequirementRules extends ListRecords
 {
     protected static string $resource = RequirementRuleResource::class;
 
+    protected ?string $subheading = 'Requirements the AI must follow, beyond what it finds on official sources. Official instructions found during research take precedence.';
+
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()->label('New rule'),
         ];
     }
 }

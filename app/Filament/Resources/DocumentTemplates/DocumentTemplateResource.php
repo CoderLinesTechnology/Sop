@@ -13,12 +13,22 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
+/** Formatting templates for generated PDF and Word documents, and when each is used. */
 class DocumentTemplateResource extends Resource
 {
     protected static ?string $model = DocumentTemplate::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentDuplicate;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Catalogue';
+
+    protected static ?int $navigationSort = 30;
+
+    protected static ?string $navigationLabel = 'Document templates';
+
+    protected static ?string $recordTitleAttribute = 'name';
 
     public static function form(Schema $schema): Schema
     {
@@ -28,13 +38,6 @@ class DocumentTemplateResource extends Resource
     public static function table(Table $table): Table
     {
         return DocumentTemplatesTable::configure($table);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
     }
 
     public static function getPages(): array

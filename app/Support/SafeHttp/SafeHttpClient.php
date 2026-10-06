@@ -26,7 +26,7 @@ class SafeHttpClient
 
     private const ALLOWED_TYPES = ['text/html', 'application/xhtml+xml', 'text/plain', 'application/pdf'];
 
-    /** @var callable|null test hook: fn(string $host): list<string> */
+    /** @var callable|null test hook: fn(string): list<string> */
     public static $resolver = null;
 
     /** @throws SafeHttpException */

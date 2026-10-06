@@ -168,7 +168,12 @@ class OrderCustomerTabs
                         TextEntry::make('applicant.source_files')
                             ->label('Source files')
                             ->state(fn (Order $record): array => array_values(array_map(
-                                fn ($item) => is_array($item) ? (string) ($item['name'] ?? $item['uuid'] ?? json_encode($item)) : (string) $item,
+                                function ($item) use ($record): string {
+                                    $uuid = is_array($item) ? ($item['uuid'] ?? null) : $item;
+                                    $name = is_string($uuid) ? $record->files->firstWhere('uuid', $uuid)?->original_name : null;
+
+                                    return $name ?? (is_array($item) ? (string) ($item['name'] ?? $item['uuid'] ?? json_encode($item)) : (string) $item);
+                                },
                                 (array) $record->applicant?->source_files,
                             )))
                             ->bulleted()

@@ -51,8 +51,9 @@ final class PdfRenderer
             'margin_left' => (float) $s['margin_left_mm'],
             'margin_header' => $layout->marginalDistance('header'),
             'margin_footer' => $layout->marginalDistance('footer'),
-            'setAutoTopMargin' => false,
-            'setAutoBottomMargin' => false,
+            // Like Word, push the body down rather than overlap when a header/footer outgrows its margin.
+            'setAutoTopMargin' => 'stretch',
+            'setAutoBottomMargin' => 'stretch',
             // Word adds "space after" and "space before"; so do we.
             'collapseBlockMargins' => false,
             'aliasNbPg' => self::TOTAL_PAGES_ALIAS,

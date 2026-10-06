@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Checkout;
 
+use App\Domain\Ai\PipelineDispatcher;
 use App\Domain\Files\FileVault;
 use App\Domain\Orders\InformationRequestService;
 use App\Domain\Orders\OrderProgress;
@@ -55,6 +56,16 @@ class OrderController extends Controller
     public function progress(Request $request, OrderProgress $progress): JsonResponse
     {
         $order = $this->order($request);
+
+        // While the customer watches, their polling also keeps the pipeline moving
+        // (it continues after this response is sent; no queue worker involved).
+        if ($order->status->isProcessing()) {
+            try {
+                app(PipelineDispatcher::class)->kickIfDue($order);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
 
         return response()->json([
             'status' => $order->status->value,

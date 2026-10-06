@@ -61,7 +61,7 @@ class PdfInspector
         $binary = $this->popplerBinary('pdftotext');
         if ($binary !== null) {
             $process = new Process([$binary, '-enc', 'UTF-8', '-eol', 'unix', $path, '-']);
-            $process->setTimeout(60);
+            $process->setTimeout(20); // runs inside web requests: never let a malformed file hang one
             $process->run();
             if ($process->isSuccessful()) {
                 $pages = explode("\f", $process->getOutput());
@@ -89,7 +89,7 @@ class PdfInspector
         $binary = $this->popplerBinary('pdffonts');
         if ($binary !== null) {
             $process = new Process([$binary, $path]);
-            $process->setTimeout(30);
+            $process->setTimeout(15);
             $process->run();
             if ($process->isSuccessful()) {
                 $fonts = [];

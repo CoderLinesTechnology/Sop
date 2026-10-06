@@ -6,8 +6,12 @@ use App\Filament\Resources\Services\Pages\CreateService;
 use App\Filament\Resources\Services\Pages\EditService;
 use App\Filament\Resources\Services\Pages\ListServices;
 use App\Filament\Resources\Services\ServiceResource;
+use App\Filament\Support\Catalogue\ServiceFormChecks;
 use App\Models\AuditLog;
+use App\Models\Faq;
+use App\Models\Order;
 use App\Models\Service;
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Repeater;
 use Livewire\Livewire;
@@ -32,7 +36,7 @@ function cvServiceFormData(array $overrides = []): array
         'slug' => 'cv-optimization',
         'document_kind' => 'custom',
         'short_description' => 'A sharper, achievement-focused CV tailored to the roles you want.',
-        'description' => "We rewrite your CV around **evidence** of impact.",
+        'description' => 'We rewrite your CV around **evidence** of impact.',
         'card_features' => [['feature' => 'ATS-friendly'], ['feature' => 'Achievement focused']],
         'badge' => 'New',
         'is_active' => true,
@@ -220,7 +224,7 @@ it('warns when no required question collects the delivery email or name', functi
 
     $undoRepeaterFake();
     $service = Service::query()->where('slug', 'cv-optimization')->firstOrFail();
-    expect(\App\Filament\Support\Catalogue\ServiceFormChecks::warningsFor($service))->toHaveCount(2);
+    expect(ServiceFormChecks::warningsFor($service))->toHaveCount(2);
 });
 
 it('archives, restores and only permanently deletes services without orders', function () {
@@ -228,7 +232,7 @@ it('archives, restores and only permanently deletes services without orders', fu
     $service = Service::factory()->withStandardFields()->create(['is_active' => true]);
 
     Livewire::test(ListServices::class)
-        ->callAction(\Filament\Actions\Testing\TestAction::make('delete')->table($service))
+        ->callAction(TestAction::make('delete')->table($service))
         ->assertHasNoActionErrors();
 
     $service->refresh();
@@ -238,20 +242,20 @@ it('archives, restores and only permanently deletes services without orders', fu
 
     Livewire::test(ListServices::class)
         ->filterTable('trashed', true)
-        ->callAction(\Filament\Actions\Testing\TestAction::make('restore')->table($service));
+        ->callAction(TestAction::make('restore')->table($service));
     expect($service->refresh()->trashed())->toBeFalse()
         ->and(AuditLog::query()->where('action', 'service.restored')->exists())->toBeTrue();
 
     $withOrder = Service::factory()->create();
-    \App\Models\Order::factory()->create(['service_id' => $withOrder->id]);
+    Order::factory()->create(['service_id' => $withOrder->id]);
     $withOrder->delete();
     $withoutOrder = Service::factory()->withStandardFields()->create();
     $withoutOrder->delete();
 
     Livewire::test(ListServices::class)
         ->filterTable('trashed', true)
-        ->assertActionHidden(\Filament\Actions\Testing\TestAction::make('forceDelete')->table($withOrder))
-        ->callAction(\Filament\Actions\Testing\TestAction::make('forceDelete')->table($withoutOrder));
+        ->assertActionHidden(TestAction::make('forceDelete')->table($withOrder))
+        ->callAction(TestAction::make('forceDelete')->table($withoutOrder));
 
     expect(Service::withTrashed()->whereKey($withOrder->id)->exists())->toBeTrue()
         ->and(Service::withTrashed()->whereKey($withoutOrder->id)->exists())->toBeFalse()
@@ -261,10 +265,10 @@ it('archives, restores and only permanently deletes services without orders', fu
 it('duplicates a service as an inactive copy with its form and FAQs', function () {
     actingAsAdmin();
     $service = Service::factory()->withStandardFields()->create(['slug' => 'personal-statement', 'is_active' => true]);
-    \App\Models\Faq::query()->create(['scope' => 'service', 'service_id' => $service->id, 'question' => 'Q?', 'answer' => 'A.', 'display_order' => 0, 'is_published' => true]);
+    Faq::query()->create(['scope' => 'service', 'service_id' => $service->id, 'question' => 'Q?', 'answer' => 'A.', 'display_order' => 0, 'is_published' => true]);
 
     Livewire::test(ListServices::class)
-        ->callAction(\Filament\Actions\Testing\TestAction::make('duplicate')->table($service));
+        ->callAction(TestAction::make('duplicate')->table($service));
 
     $copy = Service::query()->where('slug', 'personal-statement-copy')->firstOrFail();
     expect($copy->is_active)->toBeFalse()
@@ -282,4 +286,47 @@ it('reorders services from the list', function () {
         ->call('reorderTable', [(string) $second->id, (string) $first->id]);
 
     expect($second->refresh()->display_order)->toBeLessThan($first->refresh()->display_order);
+});
+
+it('edits an existing order form: cleans settings of changed types, removes and adds questions, and adds service FAQs', function () {
+    actingAsAdmin(AdminRole::Content);
+    $service = Service::factory()->withStandardFields()->create();
+    $service->fields()->create(['key' => 'tone', 'label' => 'Tone', 'type' => 'select', 'section' => 'application', 'requirement' => 'optional',
+        'options' => ['choices' => [['value' => 'formal', 'label' => 'Formal']]], 'display_order' => 20, 'is_active' => true]);
+
+    $component = Livewire::test(EditService::class, ['record' => $service->getRouteKey()]);
+    $state = $component->get('data.fields');
+
+    // Change the dropdown into a short text question, remove "goals", add a new question.
+    foreach ($state as $itemKey => $item) {
+        if ($item['key'] === 'tone') {
+            $state[$itemKey]['type'] = 'text';
+            $state[$itemKey]['validation'] = ['max_length' => 80];
+        }
+        if ($item['key'] === 'goals') {
+            unset($state[$itemKey]);
+        }
+    }
+    $state['new-item'] = ['key' => 'linkedin', 'label' => 'LinkedIn profile', 'type' => 'url', 'section' => 'details', 'requirement' => 'optional', 'width' => 'half', 'is_active' => true];
+
+    $component
+        ->set('data.fields', $state)
+        ->set('data.faqs', ['faq-1' => ['question' => 'Can I upload a PDF CV?', 'answer' => 'Yes.', 'is_published' => true]])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $service->refresh();
+    $tone = $service->fields()->where('key', 'tone')->first();
+    expect($tone->type->value)->toBe('text')
+        ->and($tone->options)->toBeNull()
+        ->and($tone->validation)->toBe(['max_length' => 80])
+        ->and($service->fields()->where('key', 'goals')->exists())->toBeFalse()
+        ->and($service->fields()->where('key', 'linkedin')->exists())->toBeTrue()
+        ->and($service->faqs()->first()?->scope)->toBe('service')
+        ->and($service->faqs()->first()?->question)->toBe('Can I upload a PDF CV?');
+
+    $audit = AuditLog::query()->where('action', 'service.updated')->latest('id')->first();
+    expect($audit->meta['form_fields']['added'])->toBe(['linkedin'])
+        ->and($audit->meta['form_fields']['removed'])->toBe(['goals'])
+        ->and(implode(' ', $audit->meta['form_fields']['changed']))->toContain('tone');
 });

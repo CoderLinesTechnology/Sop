@@ -165,8 +165,8 @@ class EditEmailTemplate extends EditRecord
 
         Notification::make()
             ->success()
-            ->title('Test email queued')
-            ->body("It will arrive at {$admin->email} shortly.")
+            ->title('Test email sent')
+            ->body("It should arrive at {$admin->email} within a minute.")
             ->send();
     }
 }

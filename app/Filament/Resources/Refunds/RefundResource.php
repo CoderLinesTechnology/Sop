@@ -12,8 +12,8 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontFamily;
-use Filament\Tables\Table;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
 use Illuminate\Support\Facades\Cache;
 use UnitEnum;
 

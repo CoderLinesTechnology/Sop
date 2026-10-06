@@ -5,6 +5,7 @@ namespace App\Filament\Support\Operations\Http;
 use App\Models\AdminUser;
 use Closure;
 use Filament\Facades\Filament;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -13,8 +14,11 @@ use Symfony\Component\HttpFoundation\Response;
  * sent to the admin sign-in page (instead of a missing customer "login"
  * route), and only active administrators with a role and multi-factor
  * authentication configured get through.
+ *
+ * It is an authentication middleware, so Laravel's middleware priority runs
+ * it with (and, as listed, just before) "auth:admin".
  */
-class EnsureAdminSession
+class EnsureAdminSession implements AuthenticatesRequests
 {
     public function handle(Request $request, Closure $next): Response
     {

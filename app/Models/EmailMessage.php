@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 #[Table(name: 'emails')]
 #[Fillable([
     'uuid', 'order_id', 'template_key', 'to_email', 'subject', 'html_body', 'text_body', 'attachments', 'status',
-    'mailer', 'provider_message_id', 'attempts', 'last_error', 'sent_at', 'delivered_at', 'failed_at', 'meta',
+    'mailer', 'provider_message_id', 'attempts', 'next_attempt_at', 'last_error', 'sent_at', 'delivered_at', 'failed_at', 'meta',
 ])]
 class EmailMessage extends Model
 {
@@ -27,6 +27,7 @@ class EmailMessage extends Model
             'sent_at' => 'datetime',
             'delivered_at' => 'datetime',
             'failed_at' => 'datetime',
+            'next_attempt_at' => 'datetime',
         ];
     }
 

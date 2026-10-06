@@ -1,58 +1,80 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Statementra
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Premium, research-led application writing at [statementra.com](https://statementra.com).
+A customer chooses a service (personal statement, statement of purpose, motivation
+letter, scholarship essay...), tells us about themselves, uploads a CV, pays with
+Paystack — no account needed — and about 20–30 minutes later receives a
+researched, fact-checked, professionally formatted document as **PDF and editable
+DOCX** by email.
 
-## About Laravel
+Behind the scenes a multi-stage AI pipeline (OpenAI Responses API with web search)
+reads the customer's material, researches the programme and institution, verifies
+claims and requirements, writes and edits the document, checks it against the
+country's and institution's rules, renders both files from one structure and
+checks them before delivery.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Laravel 13, PHP 8.3+, MySQL 8
+- Public site: Blade, Tailwind CSS v4, Alpine.js (CSP build)
+- Admin panel: Filament 5 with mandatory two-factor authentication and role-based permissions
+- Payments: Paystack (server-side initialisation, signed webhooks, server-to-server verification)
+- Documents: mPDF and PhpWord, with text, length and font checks before delivery
+- **Runs on shared hosting: no cron, no queue worker, no Redis**
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Local development
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Requirements: PHP 8.3+, Composer, Node 20+, MySQL 8.
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+In `.env`, set `APP_ENV=local`, `APP_DEBUG=true`, `APP_URL=http://localhost:8000`,
+your database credentials, and for a fully offline setup:
 
-## Contributing
+```dotenv
+PAYSTACK_MODE=mock     # a built-in fake checkout page instead of Paystack
+AI_PROVIDER=fake       # deterministic fake AI output instead of OpenAI
+MAIL_MAILER=log        # emails are written to storage/logs
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Then:
 
-## Code of Conduct
+```bash
+php artisan migrate --seed
+php artisan storage:link
+npm run build          # or `npm run dev` while working on the front end
+php artisan serve
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- Site: http://localhost:8000
+- Admin: http://localhost:8000/admin — `admin@statementra.test` / `Statementra!Admin2026`
+  (local seed only; you will be asked to set up two-factor authentication).
 
-## Security Vulnerabilities
+With `PAYSTACK_MODE=mock`, the payment step opens a local test checkout where you
+choose success or failure; a signed webhook is delivered exactly as Paystack would.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Tests
 
-## License
+```bash
+php artisan test          # or vendor/bin/pest
+vendor/bin/pint --test    # code style
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Tests run against MySQL (`statementra_test`, see `phpunit.xml`); Paystack, OpenAI
+and email are faked. CI (GitHub Actions) runs both on every push and builds an
+upload-ready release zip from `main`.
+
+## Documentation
+
+- [Deployment](docs/DEPLOYMENT.md): shared hosting (cPanel) and VPS, step by step
+- [Architecture](docs/ARCHITECTURE.md): subsystems, rules, order lifecycle, the request-driven runtime
+
+## Security
+
+Report vulnerabilities privately to security@statementra.com. Never commit `.env`
+or API keys; the Paystack secret key is only ever used on the server.

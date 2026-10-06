@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Documents\ResolvedRequirements;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -33,5 +34,11 @@ class OrderRequirement extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(DocumentTemplate::class, 'document_template_id');
+    }
+
+    /** The logged resolution as a ResolvedRequirements object. */
+    public function resolvedRequirements(): ResolvedRequirements
+    {
+        return ResolvedRequirements::fromArray((array) $this->resolved);
     }
 }

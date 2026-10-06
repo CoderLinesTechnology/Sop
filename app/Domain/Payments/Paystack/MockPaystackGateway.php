@@ -2,6 +2,8 @@
 
 namespace App\Domain\Payments\Paystack;
 
+use App\Http\Controllers\Webhooks\PaystackWebhookController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\URL;
 use RuntimeException;
@@ -80,6 +82,23 @@ final class MockPaystackGateway implements PaystackGateway
         Cache::put($this->key($reference), $transaction, now()->addHours(self::TTL_HOURS));
 
         return $transaction;
+    }
+
+    /**
+     * Deliver a correctly signed webhook exactly as Paystack would. It is handed
+     * to the webhook controller in-process: the single-threaded development
+     * server cannot answer an HTTP request to itself while busy with this one.
+     */
+    public function deliverWebhook(string $event, array $data): void
+    {
+        $body = (string) json_encode(['event' => $event, 'data' => $data], JSON_UNESCAPED_SLASHES);
+        $request = Request::create('/webhooks/paystack', 'POST', server: [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_PAYSTACK_SIGNATURE' => WebhookSignature::compute($body, WebhookSignature::secret()),
+            'REMOTE_ADDR' => '127.0.0.1',
+        ], content: $body);
+
+        app()->call([app(PaystackWebhookController::class), '__invoke'], ['request' => $request]);
     }
 
     private function key(string $reference): string

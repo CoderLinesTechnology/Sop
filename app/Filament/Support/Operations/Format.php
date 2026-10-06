@@ -5,8 +5,11 @@ namespace App\Filament\Support\Operations;
 use App\Support\Money;
 use BackedEnum;
 use DateTimeInterface;
+use Filament\Support\Facades\FilamentTimezone;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Consistent formatting for the operations side of the admin panel: money,
@@ -107,9 +110,20 @@ final class Format
         };
     }
 
-    public static function dateTime(?DateTimeInterface $value): string
+    /** In the panel's time zone; accepts a date object or a raw database timestamp string. */
+    public static function dateTime(DateTimeInterface|string|null $value): string
     {
-        return $value ? $value->format(self::DATETIME) : self::PLACEHOLDER;
+        if (is_string($value) && $value !== '') {
+            try {
+                $value = Carbon::parse($value);
+            } catch (Throwable) {
+                return $value;
+            }
+        }
+
+        return $value instanceof DateTimeInterface
+            ? Carbon::instance($value)->setTimezone(FilamentTimezone::get())->format(self::DATETIME)
+            : self::PLACEHOLDER;
     }
 
     /** "first_name" → "First name". */

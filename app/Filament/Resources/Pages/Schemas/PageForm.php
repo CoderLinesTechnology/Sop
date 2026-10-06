@@ -109,7 +109,7 @@ class PageForm
                     ])
                     ->minHeight('24rem')
                     ->maxLength(200000)
-                    ->helperText('Markdown. Placeholders replaced on the site: {{support_email}}, {{site_name}}, {{date}} (last updated), {{retention_days}}.')
+                    ->helperText('Markdown. Placeholders replaced on the site: {{date}} (date of the last change to this page), {{support_email}}, {{contact_email}}, {{site_name}}, {{retention_days}}.')
                     ->afterLabel(Action::make('previewBody')
                         ->label('Preview')
                         ->icon(Heroicon::OutlinedEye)
@@ -137,7 +137,7 @@ class PageForm
                 DateTimePicker::make('published_at')
                     ->label('Published on')
                     ->seconds(false)
-                    ->helperText('Shown as the “last updated” date on legal pages.'),
+                    ->helperText('Set automatically when the page is first published.'),
                 MediaUpload::to('hero_image_path', 'pages/hero')
                     ->label('Header image')
                     ->visible(fn (Get $get): bool => ! PageSections::usesSections($get('kind'))),

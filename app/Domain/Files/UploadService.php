@@ -5,11 +5,11 @@ namespace App\Domain\Files;
 use App\Domain\Orders\CheckoutSession;
 use App\Enums\ExtractionStatus;
 use App\Enums\FileScanStatus;
-use App\Jobs\ExtractUploadText;
 use App\Models\Order;
 use App\Models\Service;
 use App\Models\ServiceField;
 use App\Models\UploadedFile;
+use App\Support\Runtime\AfterResponse;
 use App\Support\SecurityLog;
 use App\Support\Settings;
 use Illuminate\Http\Request;
@@ -105,7 +105,8 @@ final class UploadService
             'uploaded_ip' => $request->ip(),
         ]);
 
-        ExtractUploadText::dispatch($upload->id);
+        $uploadId = $upload->id;
+        AfterResponse::run('extract-upload:'.$uploadId, fn () => app(UploadTextExtraction::class)->run($uploadId), timeLimitSeconds: 180);
 
         return $upload;
     }

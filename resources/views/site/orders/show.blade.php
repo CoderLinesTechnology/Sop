@@ -48,7 +48,8 @@
                                 @if ($revisionEligibility['fee'] > 0)
                                     Additional revisions cost {{ \App\Support\Money::format($revisionEligibility['fee'], $order->currency) }}.
                                 @else
-                                    {{ $revisionEligibility['included_remaining'] }} revision{{ $revisionEligibility['included_remaining'] === 1 ? '' : 's' }} included@if ($order->revision_deadline_at) until {{ $order->revision_deadline_at->format('j F Y') }}@endif.
+                                    {{ $revisionEligibility['included_remaining'] }} revision{{ $revisionEligibility['included_remaining'] === 1 ? '' : 's' }} included
+                                    @if ($order->revision_deadline_at) until {{ $order->revision_deadline_at->format('j F Y') }}@endif.
                                 @endif
                                 Tell us what you would like us to change.
                             </p>
