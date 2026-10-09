@@ -23,7 +23,18 @@ it('seeds the document templates and requirement rules idempotently', function (
     $ucas = RequirementRule::query()->where('application_platform', 'UCAS')->sole();
     $commonApp = RequirementRule::query()->where('application_platform', 'Common App')->sole();
 
-    expect($templates)->toEqualCanonicalizing(['standard-a4', 'us-letter', 'motivation-letter-european', 'ucas-personal-statement'])
+    expect($templates)->toEqualCanonicalizing([
+        'standard-a4',
+        'us-letter',
+        'motivation-letter-european',
+        'ucas-personal-statement',
+        'executive-resume-cv',
+        'visa-statement-of-purpose',
+        'academic-research-proposal',
+        'scholarship-application-essay',
+        'mba-leadership-statement',
+        'modern-business-cover-letter',
+    ])
         ->and(DocumentTemplate::query()->where('is_default', true)->pluck('slug')->all())->toBe(['standard-a4'])
         ->and(DocumentTemplate::query()->where('slug', 'us-letter')->value('font_size'))->toEqual(11.5)
         ->and(RequirementRule::query()->where('scope', 'country')->count())->toBe(23)

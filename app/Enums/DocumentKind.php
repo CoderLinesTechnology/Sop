@@ -18,6 +18,7 @@ enum DocumentKind: string implements HasLabel
     case GeneralEssay = 'general_essay';
     case CoverLetter = 'cover_letter';
     case ResearchProposal = 'research_proposal';
+    case Resume = 'resume';
     case Custom = 'custom';
 
     public function getLabel(): string
@@ -30,6 +31,7 @@ enum DocumentKind: string implements HasLabel
             self::GeneralEssay => 'General Essay',
             self::CoverLetter => 'Cover Letter',
             self::ResearchProposal => 'Research Proposal',
+            self::Resume => 'Resume / CV',
             self::Custom => 'Custom document',
         };
     }
@@ -45,6 +47,7 @@ enum DocumentKind: string implements HasLabel
             self::GeneralEssay => 'Follow the requested structure and submission requirements exactly.',
             self::CoverLetter => 'Role or opportunity fit; concrete evidence of relevant skills; concise professional letter conventions.',
             self::ResearchProposal => 'Research question; context and gap; methodology; feasibility; fit with supervisors and department.',
+            self::Resume => 'Concise, achievement-oriented bullet points; quantified results; reverse-chronological order; clean layout; tailored to the target role.',
             self::Custom => 'Follow the service writing guidance and the customer prompt exactly.',
         };
     }

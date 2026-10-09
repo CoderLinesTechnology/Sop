@@ -56,6 +56,7 @@ class RequirementResolver
         'general_essay' => 750,
         'cover_letter' => 400,
         'research_proposal' => 1500,
+        'resume' => 800,
         'custom' => 750,
     ];
 
