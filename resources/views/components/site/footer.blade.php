@@ -3,7 +3,9 @@
     <div class="container-site py-14">
         <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1.1fr]">
             <div>
-                <a href="{{ route('home') }}" class="font-serif text-[1.75rem] leading-none tracking-[-0.02em] text-white">{{ $siteName }}</a>
+                <a href="{{ route('home') }}" class="inline-block" aria-label="{{ $siteName }} home">
+                    <img src="{{ asset('images/brand/statementra-logo-reversed.svg') }}" alt="{{ $siteName }}" width="143" height="40" class="h-10 w-auto" loading="lazy" decoding="async">
+                </a>
                 <p class="mt-3 text-sm text-white/75">{{ $tagline }}</p>
                 @if ($socials)
                     <ul class="mt-6 flex items-center gap-4" aria-label="Social media">

@@ -1,8 +1,8 @@
 @props(['navItems' => [], 'siteName' => 'Statementra', 'bare' => false])
 <header class="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
     <div class="container-site flex h-[4.25rem] items-center justify-between gap-6">
-        <a href="{{ route('home') }}" class="font-serif text-[1.7rem] leading-none tracking-[-0.02em] text-brand-700 sm:text-[1.85rem]" aria-label="{{ $siteName }} home">
-            {{ $siteName }}
+        <a href="{{ route('home') }}" class="shrink-0" aria-label="{{ $siteName }} home">
+            <img src="{{ asset('images/brand/statementra-logo.svg') }}" alt="{{ $siteName }}" width="157" height="44" class="h-10 w-auto sm:h-11" decoding="async">
         </a>
 
         @unless ($bare)

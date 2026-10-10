@@ -47,7 +47,9 @@ class AdminPanelProvider extends PanelProvider
                 isRequired: true,
             )
             ->brandName('Statementra Admin')
-            ->favicon(asset('favicon.svg'))
+            ->brandLogo(asset('images/brand/statementra-logo.svg'))
+            ->brandLogoHeight('2rem')
+            ->favicon(asset('favicon.svg').'?v=2')
             ->defaultAvatarProvider(InitialsAvatarProvider::class)
             ->colors([
                 // The site's brand greens, shade for shade (Color::hex() would derive lighter teals).

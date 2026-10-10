@@ -139,7 +139,8 @@ it('takes turns between equally good samples across orders', function () {
     $selector = app(WritingSampleSelector::class);
 
     $firstChoices = collect(range(1, 24))
-        ->map(fn (int $i) => $selector->choose(Order::factory()->make(['public_id' => 'order-'.$i, 'programme' => 'MSc Computer Science', 'degree_level' => 'masters', 'country_code' => 'GB']), DocumentKind::PersonalStatement, 1)[0])
+        // The selector reads only these attributes: an unsaved order is enough.
+        ->map(fn (int $i) => $selector->choose((new Order)->forceFill(['public_id' => 'order-'.$i, 'programme' => 'MSc Computer Science', 'degree_level' => 'masters', 'country_code' => 'GB']), DocumentKind::PersonalStatement, 1)[0])
         ->unique()
         ->sort()
         ->values()

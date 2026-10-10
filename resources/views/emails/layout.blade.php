@@ -13,8 +13,8 @@
         <td align="center" style="padding:32px 16px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
                 <tr>
-                    <td style="padding:0 4px 20px 4px;font-family:Georgia,'Times New Roman',serif;font-size:26px;color:#12403A;letter-spacing:-0.3px;">
-                        {{ $siteName }}
+                    <td style="padding:0 4px 20px 4px;">
+                        <img src="{{ asset('images/brand/statementra-logo-email.png') }}" width="200" height="56" alt="{{ $siteName }}" style="display:block;border:0;outline:none;text-decoration:none;height:auto;max-width:200px;font-family:Georgia,'Times New Roman',serif;font-size:24px;color:#12403A;">
                     </td>
                 </tr>
                 <tr>
