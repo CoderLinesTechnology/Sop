@@ -17,9 +17,7 @@ class AdminAlertMail extends Mailable
         public readonly string $alertTitle,
         public readonly string $alertBody,
         public readonly ?string $actionUrl = null,
-    ) {
-        $this->onQueue('emails');
-    }
+    ) {}
 
     public function envelope(): Envelope
     {

@@ -4,8 +4,10 @@ namespace App\Domain\Ai\Pipeline;
 
 use App\Models\AiJob;
 use App\Support\Runtime\AfterResponse;
+use App\Support\Runtime\BackgroundProcess;
 use App\Support\Runtime\SelfTrigger;
 use Closure;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -20,6 +22,11 @@ use Throwable;
  *  - continueElsewhere(): fire-and-forget signed loopback request to
  *                         internal.pipeline.continue, so the work continues in
  *                         a fresh PHP request with its own time limit.
+ *
+ * With statementra.runtime.pipeline_driver = "process" (hosts whose web
+ * server stops requests after a couple of minutes, e.g. Hostinger), both
+ * start a detached `statementra:pipeline-run` command-line process instead:
+ * one AI stage can take several minutes.
  *
  * The job's state (current_stage, next_run_at) is always persisted before a
  * trigger, so a lost trigger is picked up again by the heartbeat or the
@@ -51,6 +58,11 @@ class PipelineTrigger
         $remote = self::$loopbackDepth > 0;
 
         DB::afterCommit(function () use ($id, $job, $remote): void {
+            // Falls back to working in this request if no process could be started.
+            if ($this->runsInProcesses() && $this->startProcess($job)) {
+                return;
+            }
+
             if ($remote && $this->continueElsewhere($job)) {
                 return;
             }
@@ -62,6 +74,10 @@ class PipelineTrigger
     /** @return bool whether the loopback request was accepted */
     public function continueElsewhere(AiJob $job): bool
     {
+        if ($this->runsInProcesses()) {
+            return $this->startProcess($job);
+        }
+
         try {
             return SelfTrigger::fire('internal.pipeline.continue', ['aiJob' => $job->uuid]);
         } catch (Throwable $e) {
@@ -69,5 +85,38 @@ class PipelineTrigger
 
             return false;
         }
+    }
+
+    /**
+     * Whether pipeline work runs in detached command-line processes. In the
+     * console (that worker itself, artisan commands, tests) work always runs inline.
+     */
+    protected function runsInProcesses(): bool
+    {
+        return config('statementra.runtime.pipeline_driver') === 'process' && ! app()->runningInConsole();
+    }
+
+    /** Start the job's worker process (at most one start per job per minute). */
+    private function startProcess(AiJob $job): bool
+    {
+        // The status page polls every few seconds; an extra worker would find the job leased and exit anyway.
+        $throttle = 'pipeline:process:'.$job->getKey();
+        if (! Cache::add($throttle, true, now()->addMinute())) {
+            return true;
+        }
+
+        try {
+            $started = app(BackgroundProcess::class)->artisan(['statementra:pipeline-run', (string) $job->uuid]);
+        } catch (Throwable $e) {
+            // Never let this break the caller (a payment confirmation, a status page): work in-request instead.
+            Log::warning('Could not start the pipeline worker process.', ['job' => $job->uuid, 'error' => $e->getMessage()]);
+            $started = false;
+        }
+
+        if (! $started) {
+            Cache::forget($throttle);
+        }
+
+        return $started;
     }
 }

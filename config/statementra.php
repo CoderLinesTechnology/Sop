@@ -132,6 +132,11 @@ return [
         'heartbeat_on_traffic' => (bool) env('RUNTIME_HEARTBEAT_ON_TRAFFIC', true),
         // Secret path segment for the external ping URL; generated and stored in settings when empty.
         'heartbeat_token' => env('RUNTIME_HEARTBEAT_TOKEN'),
+        // "request" (default): AI stages run inside web requests (after the response).
+        // "process": web requests start a detached `php artisan statementra:pipeline-run`
+        // instead — for hosts that stop requests after a couple of minutes (Hostinger).
+        'pipeline_driver' => env('RUNTIME_PIPELINE_DRIVER', 'request'),
+        'php_binary' => env('RUNTIME_PHP_BINARY', '/usr/bin/php'),
         'heartbeat_min_gap_seconds' => 60,
         'heartbeat_budget_seconds' => 25,
 
