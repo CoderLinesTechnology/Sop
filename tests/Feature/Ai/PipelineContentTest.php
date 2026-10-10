@@ -54,7 +54,7 @@ it('asks the customer for missing essentials, waits, and completes after the ans
         ->and($analyses)->toHaveCount(2)
         ->and($analyses[0]->output['information_requested'])->toBeTrue()
         ->and($analyses[1]->output['information_requested'])->toBeFalse()
-        ->and(AiJobStep::query()->where('ai_job_id', $job->id)->where('stage', 'ingestion')->count())->toBe(2)
+        ->and(AiJobStep::query()->where('ai_job_id', $job->id)->where('stage', 'ingestion')->count())->toBe(1) // the answer is merged, uploads are not re-read
         ->and(InformationRequest::query()->where('order_id', $order->id)->count())->toBe(1)
         ->and(deliveredText($order->id))->toContain('solar mini-grids');
 });

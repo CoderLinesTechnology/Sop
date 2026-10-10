@@ -2,6 +2,7 @@
 
 namespace App\Domain\Orders;
 
+use App\Domain\Ai\FollowUpFacts;
 use App\Domain\Ai\PipelineDispatcher;
 use App\Domain\Email\OrderEmailVariables;
 use App\Domain\Email\TransactionalMailer;
@@ -130,6 +131,9 @@ class InformationRequestService
                     ['label' => $question['question'], 'type' => 'textarea', 'section' => FieldSection::Additional->value, 'value' => $clean[$question['key']]],
                 );
             }
+
+            // Into the applicant profile directly, so the pipeline need not re-read every upload (no model call).
+            app(FollowUpFacts::class)->merge($request, $clean);
 
             if ($order->status === OrderStatus::NeedsInformation) {
                 $this->states->transition($order, OrderStatus::Researching, 'customer', reason: 'Customer provided requested information');

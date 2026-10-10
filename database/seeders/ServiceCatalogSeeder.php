@@ -80,11 +80,11 @@ class ServiceCatalogSeeder extends Seeder
                 'seo_description' => 'A personal statement built around your real story and researched around your programme. PDF + Word delivered to your email in about 20–30 minutes.',
                 'writing_guidance' => 'Lead with a specific, genuine moment or question from the applicant\'s own experience. Show the development of their interest through concrete evidence, connect it to the specific programme, and close with realistic goals.',
                 'fields' => [...$this->detailFields(), ...$this->applicationFields(), ...$this->uploadFields(), ...[
-                    $this->story('why_field', 'Why are you interested in this field?', 'recommended', 'A moment, project, book, job or problem that sparked or deepened your interest.'),
-                    $this->story('background', 'Your background', 'recommended', 'Education, work experience, projects, achievements, volunteering or leadership. Skip anything already in your CV.', optionalWithCv: true, ai: 'Primary evidence for the narrative. Never embellish.'),
-                    $this->story('why_programme', 'Why did you choose this programme?', 'recommended', 'What in the course content, structure or approach appeals to you?'),
-                    $this->story('why_institution', 'Why this university?', 'optional', 'We will also research the institution, so a sentence or two is enough.'),
-                    $this->story('goals', 'What are your future goals?', 'recommended', 'Where do you hope this programme will take you?'),
+                    $this->story('why_field', 'Why are you interested in this field?', 'required', 'A moment, project, book, job or problem that sparked or deepened your interest. A few sentences is enough.', starters: ['I first became interested in … when …', 'A project that shaped my interest was …', 'The problem I want to help solve is …']),
+                    $this->story('background', 'Your background', 'recommended', 'Education, work experience, projects, achievements, volunteering or leadership. Skip anything already in your CV.', optionalWithCv: true, ai: 'Primary evidence for the narrative. Never embellish.', starters: ['In my role at …, I …', 'My final-year project on … taught me …', 'One achievement I am proud of is …']),
+                    $this->story('why_programme', 'Why did you choose this programme?', 'recommended', 'What in the course content, structure or approach appeals to you?', starters: ['The module on … appeals to me because …', 'This programme will help me … because …']),
+                    $this->story('why_institution', 'Why this university?', 'optional', 'We will also research the institution, so a sentence or two is enough.', starters: ['I want to study at … because …']),
+                    $this->story('goals', 'What are your future goals?', 'required', 'Where do you hope this programme will take you? A few sentences is enough.', starters: ['After graduating, I want to …', 'In five years, I hope to …', 'I want to use what I learn to …']),
                 ], ...$this->additionalFields()],
                 'faqs' => [
                     ['How long should a personal statement be?', 'It depends on where you apply. UCAS (UK undergraduate) uses a 4,000-character limit, US applications often allow around 650 words, and many postgraduate programmes set their own limits. We research the requirement for your programme and keep your statement within it.'],
@@ -107,11 +107,11 @@ class ServiceCatalogSeeder extends Seeder
                 'seo_description' => 'A research-driven statement of purpose tailored to your programme, faculty and goals. Fact-checked, professionally formatted, delivered by email.',
                 'writing_guidance' => 'Prioritise academic preparation, specific research or academic interests, concrete programme fit (modules, research areas, faculty interests only if verified) and professional goals. Keep the tone focused and scholarly without jargon.',
                 'fields' => [...$this->detailFields(), ...$this->applicationFields(), ...$this->uploadFields(), ...[
-                    $this->story('background', 'Your academic background', 'recommended', 'Degrees, key modules, projects, thesis, grades you are proud of. Skip anything already in your CV.', optionalWithCv: true),
-                    $this->story('research_interests', 'What are your academic or research interests?', 'recommended', 'Topics, questions or problems you want to work on.'),
-                    $this->story('experience', 'Relevant work or research experience', 'optional', 'Roles, labs, internships, publications, tools you have used.', optionalWithCv: true),
-                    $this->story('why_programme', 'Why did you choose this programme?', 'recommended', 'Courses, specialisations or research areas that attract you.'),
-                    $this->story('goals', 'What are your career goals?', 'recommended', 'Short- and long-term goals after the degree.'),
+                    $this->story('background', 'Your academic background', 'recommended', 'Degrees, key modules, projects, thesis, grades you are proud of. Skip anything already in your CV.', optionalWithCv: true, starters: ['My degree in … gave me …', 'My thesis on … taught me …']),
+                    $this->story('research_interests', 'What are your academic or research interests?', 'required', 'Topics, questions or problems you want to work on. A few sentences is enough.', starters: ['I want to research … because …', 'A question I keep coming back to is …', 'My work on … led me to …']),
+                    $this->story('experience', 'Relevant work or research experience', 'optional', 'Roles, labs, internships, publications, tools you have used.', optionalWithCv: true, starters: ['At …, I worked on … using …', 'In the … lab, I …']),
+                    $this->story('why_programme', 'Why did you choose this programme?', 'recommended', 'Courses, specialisations or research areas that attract you.', starters: ['The research on … in this programme matches my interest in …', 'The … specialisation will help me …']),
+                    $this->story('goals', 'What are your career goals?', 'required', 'Short- and long-term goals after the degree. A few sentences is enough.', starters: ['After the degree, I plan to …', 'In the long term, I want to …']),
                 ], ...$this->additionalFields()],
                 'faqs' => [
                     ['Do you research the faculty and research groups?', 'Yes. Our research process checks official programme, department and faculty pages and only uses information we can verify. We never invent professors, labs or modules.'],
@@ -133,10 +133,10 @@ class ServiceCatalogSeeder extends Seeder
                 'seo_description' => 'A sincere, specific motivation letter for university programmes, scholarships and exchanges — formatted to your destination country\'s conventions.',
                 'writing_guidance' => 'Write as a formal letter (salutation, body, closing) following the destination country\'s conventions. Focus on motivation, fit with the opportunity, personal and professional development, and goals. Keep it to one page unless a longer limit is stated.',
                 'fields' => [...$this->detailFields(), ...$this->applicationFields(), ...$this->uploadFields(), ...[
-                    $this->story('motivation', 'What motivates you to apply?', 'recommended', 'What do you hope to gain, and why now?'),
-                    $this->story('background', 'Relevant experience', 'recommended', 'Studies, work, volunteering or projects that prepared you. Skip anything already in your CV.', optionalWithCv: true),
-                    $this->story('why_programme', 'Why this programme or opportunity?', 'recommended', 'What makes it the right fit for you?'),
-                    $this->story('goals', 'What are your goals?', 'optional', 'How will this opportunity help you reach them?'),
+                    $this->story('motivation', 'What motivates you to apply?', 'recommended', 'What do you hope to gain, and why now?', starters: ['I am applying now because …', 'This opportunity will help me …']),
+                    $this->story('background', 'Relevant experience', 'recommended', 'Studies, work, volunteering or projects that prepared you. Skip anything already in your CV.', optionalWithCv: true, starters: ['In my role at …, I …', 'Through …, I learned …']),
+                    $this->story('why_programme', 'Why this programme or opportunity?', 'recommended', 'What makes it the right fit for you?', starters: ['This programme fits me because …']),
+                    $this->story('goals', 'What are your goals?', 'optional', 'How will this opportunity help you reach them?', starters: ['This opportunity will help me reach my goal of …']),
                 ], ...$this->additionalFields()],
             ],
             [
@@ -155,9 +155,9 @@ class ServiceCatalogSeeder extends Seeder
                 'seo_description' => 'Scholarship essays researched around the scholarship\'s criteria and written from your real achievements and goals. PDF + Word by email.',
                 'writing_guidance' => "Answer the scholarship's exact prompt. Map the applicant's evidence to the scholarship's published selection criteria (only if verified). Emphasise achievements, leadership, impact and a credible plan for using the opportunity.",
                 'fields' => [...$this->detailFields(), ...$this->applicationFields(scholarship: true), ...$this->uploadFields(), ...[
-                    $this->story('achievements', 'Your key achievements', 'recommended', 'Academic, leadership, community or professional achievements you are proud of. Skip anything already in your CV.', optionalWithCv: true),
-                    $this->story('impact', 'What impact do you want to make?', 'recommended', 'In your community, field or country — and how this scholarship helps.'),
-                    $this->story('why_programme', 'What will you study, and why?', 'recommended', 'The programme you intend to pursue with the scholarship.'),
+                    $this->story('achievements', 'Your key achievements', 'recommended', 'Academic, leadership, community or professional achievements you are proud of. Skip anything already in your CV.', optionalWithCv: true, starters: ['One achievement I am proud of is …, which led to …', 'As …, I led …']),
+                    $this->story('impact', 'What impact do you want to make?', 'recommended', 'In your community, field or country — and how this scholarship helps.', starters: ['In my community, I want to …', 'The change I want to make is …']),
+                    $this->story('why_programme', 'What will you study, and why?', 'recommended', 'The programme you intend to pursue with the scholarship.', starters: ['I will study … because …']),
                     $this->story('circumstances', 'Anything about your circumstances the committee should know?', 'optional', 'Only if relevant and you are comfortable sharing it (e.g. financial need, first-generation student).'),
                 ], ...$this->additionalFields()],
             ],
@@ -189,7 +189,7 @@ class ServiceCatalogSeeder extends Seeder
                         ['value' => 'persuasive', 'label' => 'Persuasive'],
                     ]], 'width' => 'half'],
                 ], ...$this->uploadFields(), ...[
-                    $this->story('key_points', 'Key points or experiences to include', 'recommended', 'Anything you definitely want the essay to mention.'),
+                    $this->story('key_points', 'Key points or experiences to include', 'recommended', 'Anything you definitely want the essay to mention.', starters: ['I want the essay to mention …', 'One experience to include is …']),
                     $this->story('background', 'Relevant background', 'optional', 'Experience or knowledge the essay can draw on. Skip anything already in your CV.', optionalWithCv: true),
                 ], ...$this->additionalFields()],
             ],
@@ -215,9 +215,9 @@ class ServiceCatalogSeeder extends Seeder
                     $this->deadlineField(),
                     ['key' => 'job_description', 'label' => 'Job description or listing', 'type' => 'textarea', 'section' => 'application', 'requirement' => 'recommended', 'maps_to' => FieldMapping::EssayPrompt->value, 'placeholder' => 'Paste the full job listing or key requirements here.', 'validation' => ['max_length' => 5000]],
                 ], ...$this->uploadFields(), ...[
-                    $this->story('experience', 'Relevant experience', 'recommended', 'Roles, projects or achievements that make you a strong fit. Skip anything already in your CV.', optionalWithCv: true),
-                    $this->story('why_role', 'Why does this role interest you?', 'recommended', 'What excites you about the position and the organisation?'),
-                    $this->story('strengths', 'Key strengths to highlight', 'optional', 'Skills, qualities or accomplishments you want emphasised.'),
+                    $this->story('experience', 'Relevant experience', 'recommended', 'Roles, projects or achievements that make you a strong fit. Skip anything already in your CV.', optionalWithCv: true, starters: ['At …, I …, which resulted in …']),
+                    $this->story('why_role', 'Why does this role interest you?', 'recommended', 'What excites you about the position and the organisation?', starters: ['This role interests me because …', 'I admire …\'s work on …']),
+                    $this->story('strengths', 'Key strengths to highlight', 'optional', 'Skills, qualities or accomplishments you want emphasised.', starters: ['My strongest skill is …, for example …']),
                 ], ...$this->additionalFields()],
                 'faqs' => [
                     ['How long should a cover letter be?', 'Most hiring managers prefer a single page. We write concisely, typically 250–400 words, and format it to fit one page while covering the essentials.'],
@@ -323,7 +323,8 @@ class ServiceCatalogSeeder extends Seeder
         ];
     }
 
-    private function story(string $key, string $label, string $requirement, string $help, bool $optionalWithCv = false, ?string $ai = null): array
+    /** @param  list<string>  $starters  clickable sentence starters shown under the question */
+    private function story(string $key, string $label, string $requirement, string $help, bool $optionalWithCv = false, ?string $ai = null, array $starters = []): array
     {
         return array_filter([
             'key' => $key,
@@ -333,6 +334,7 @@ class ServiceCatalogSeeder extends Seeder
             'requirement' => $requirement,
             'help_text' => $help,
             'validation' => ['max_length' => 3000],
+            'options' => $starters !== [] ? ['starters' => $starters] : null,
             'optional_when_upload' => $optionalWithCv ? 'cv' : null,
             'ai_hint' => $ai,
         ], fn ($v) => $v !== null);

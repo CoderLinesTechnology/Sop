@@ -122,7 +122,33 @@ function initSubmitOnce() {
     });
 }
 
+/*
+ * Answer starters: buttons under a question (data-starter) put the beginning
+ * of a sentence into its textarea so the customer only has to finish it. The
+ * first "…" is selected, so typing replaces it. Plain text, no AI involved.
+ */
+function initAnswerStarters() {
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-starter]');
+        if (!button) return;
+        const field = document.getElementById(button.dataset.starterTarget || '');
+        if (!field || field.disabled || field.readOnly) return;
+
+        const starter = button.dataset.starter || '';
+        const current = field.value.trimEnd();
+        const next = current ? `${current}\n${starter}` : starter;
+        if (field.maxLength > 0 && next.length > field.maxLength) return;
+
+        field.value = next;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.focus();
+        const gap = next.indexOf('…', next.length - starter.length);
+        field.setSelectionRange(gap >= 0 ? gap : next.length, gap >= 0 ? gap + 1 : next.length);
+    });
+}
+
 initNavigation();
 initCountdowns();
 initFormStartBeacon();
 initSubmitOnce();
+initAnswerStarters();

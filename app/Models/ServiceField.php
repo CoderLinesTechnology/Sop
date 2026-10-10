@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * options (by type):
  *  - select / multiselect / radio: {"choices": [{"value": "msc", "label": "Master's"}]}
  *  - file: {"accept": ["pdf","docx"], "max_files": 3, "purpose": "cv"}
+ *  - textarea: {"starters": ["I first became interested in … when …"]}
+ *    clickable sentence starters shown under the question (no AI involved)
  * validation: {"min_length": 10, "max_length": 3000, "min": 0, "max": 5000}
  * show_when: {"field": "degree_level", "equals": "phd"}
  * optional_when_upload: key of a file field; when a file is uploaded there,
@@ -33,6 +35,11 @@ class ServiceField extends Model
         'writing_sample' => 'Writing sample',
         'other' => 'Other documents',
     ];
+
+    /** Answer starters per textarea question, and the longest starter kept. */
+    public const MAX_STARTERS = 4;
+
+    public const MAX_STARTER_LENGTH = 120;
 
     protected function casts(): array
     {
@@ -61,6 +68,19 @@ class ServiceField extends Model
     public function isRequired(): bool
     {
         return $this->requirement === RequirementLevel::Required;
+    }
+
+    /** @return list<string> sentence starters offered under a textarea question */
+    public function starters(): array
+    {
+        if ($this->type !== FieldType::Textarea) {
+            return [];
+        }
+
+        return array_values(array_slice(array_filter(
+            array_map(fn ($starter) => is_string($starter) ? trim($starter) : '', (array) data_get($this->options, 'starters', [])),
+            fn (string $starter) => $starter !== '',
+        ), 0, self::MAX_STARTERS));
     }
 
     /** @return array<string, string> value => label */

@@ -46,6 +46,7 @@
                         <span class="pointer-events-none absolute right-3 bottom-2 text-[0.7rem] text-muted tabular-nums" aria-hidden="true"><span x-text="charCount('{{ $key }}')">{{ mb_strlen((string) (is_array($value) ? '' : $value)) }}</span>/{{ $max }}</span>
                     @endif
                 </div>
+                <x-form.starters :starters="$field->starters()" :target="$id" />
                 @break
 
             @case(\App\Enums\FieldType::Select)

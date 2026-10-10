@@ -14,7 +14,9 @@ use App\Models\AiJob;
 use App\Models\DocumentVersion;
 use App\Models\Feedback;
 use App\Models\Order;
+use App\Models\ServiceField;
 use App\Support\Seo;
+use App\Support\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,6 +48,7 @@ class OrderController extends Controller
             'order' => $order,
             'steps' => $progress->steps($order),
             'informationRequest' => $order->openInformationRequest,
+            'followupStarters' => $this->followupStarters(),
             'version' => $version,
             'revisionEligibility' => app(RevisionService::class)->eligibility($order),
             'openRevision' => $order->revisions->first(fn ($r) => $r->status->isOpen()),
@@ -178,6 +181,15 @@ class OrderController extends Controller
         ]);
 
         return redirect()->route('orders.show', $order->public_id)->with('status', 'Thank you for your feedback — it helps us improve.');
+    }
+
+    /** @return list<string> sentence starters shown under follow-up questions (Admin → Settings → Orders) */
+    private function followupStarters(): array
+    {
+        return array_values(array_slice(array_filter(
+            array_map(fn ($starter) => is_string($starter) ? mb_substr(trim($starter), 0, ServiceField::MAX_STARTER_LENGTH) : '', (array) Settings::get('orders.followup_starters', [])),
+            fn (string $starter) => $starter !== '',
+        ), 0, ServiceField::MAX_STARTERS));
     }
 
     private function order(Request $request): Order

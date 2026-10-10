@@ -66,6 +66,18 @@ final class ServiceFieldNormalizer
             return ['choices' => $choices];
         }
 
+        if ($type === FieldType::Textarea) {
+            $starters = [];
+            foreach ((array) ($options['starters'] ?? []) as $starter) {
+                $starter = is_string($starter) ? trim(preg_replace('/\s+/u', ' ', $starter) ?? '') : '';
+                if ($starter !== '' && ! in_array($starter, $starters, true)) {
+                    $starters[] = mb_substr($starter, 0, ServiceField::MAX_STARTER_LENGTH);
+                }
+            }
+
+            return $starters === [] ? null : ['starters' => array_slice($starters, 0, ServiceField::MAX_STARTERS)];
+        }
+
         if ($type === FieldType::File) {
             $allowed = array_keys(ServiceFieldSchema::FILE_EXTENSIONS);
             $accept = array_values(array_intersect($allowed, array_map('strtolower', array_map('strval', (array) ($options['accept'] ?? [])))));

@@ -49,6 +49,12 @@ final class Settings
             'orders.needs_info_reminder_hours' => 24,
             'orders.needs_info_timeout_hours' => 72,
             'orders.needs_info_timeout_action' => 'proceed',
+            'orders.followup_starters' => [
+                'For example, …',
+                'One specific moment was when …',
+                'What I did was …, and the result was …',
+                'This matters to me because …',
+            ],
             'orders.retention_days' => 90,
 
             'payments.allow_free_orders' => true,

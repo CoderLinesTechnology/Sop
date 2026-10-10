@@ -21,6 +21,7 @@ use App\Enums\StepStatus;
 use App\Models\AdminUser;
 use App\Models\AiJob;
 use App\Models\AiJobStep;
+use App\Models\Applicant;
 use App\Models\Order;
 use App\Models\Revision;
 use App\Support\Audit;
@@ -152,7 +153,7 @@ class PipelineDispatcher
 
             if ($job->status === AiJobStatus::WaitingForCustomer) {
                 $updates['current_stage'] = ($reason === 'information_received'
-                    ? StagePlan::first($job)
+                    ? $this->stageAfterAnswers($job)
                     : (StagePlan::after($job, PipelineStage::Analysis) ?? StagePlan::first($job)))->value;
                 $updates['status'] = ($staysPaused ? AiJobStatus::Paused : AiJobStatus::Running)->value;
 
@@ -400,6 +401,21 @@ class PipelineDispatcher
     // ------------------------------------------------- request-driven runtime
 
     /** Run the job's due work after the current response (immediately in console/tests). */
+    /**
+     * Where a job continues once the customer has answered follow-up
+     * questions. The answers are already in the applicant profile
+     * (FollowUpFacts), so the uploads are not read again by a model: analysis
+     * re-plans with them. Without a profile yet, the job starts from the top.
+     */
+    private function stageAfterAnswers(AiJob $job): PipelineStage
+    {
+        $hasProfile = Applicant::query()->where('order_id', $job->order_id)->whereNotNull('profile')->exists();
+
+        return $hasProfile && in_array(PipelineStage::Analysis, StagePlan::stagesFor($job), true)
+            ? PipelineStage::Analysis
+            : StagePlan::first($job);
+    }
+
     public function kick(AiJob $job): void
     {
         $this->trigger->kick($job);

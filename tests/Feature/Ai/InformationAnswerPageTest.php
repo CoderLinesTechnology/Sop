@@ -53,3 +53,12 @@ it('still requires access to the order for the answer address', function () {
     $this->get('/o/'.$order->public_id.'/information')->assertForbidden();
     $this->post(route('orders.information', $order->public_id), ['answers' => ['q1' => 'x']])->assertForbidden();
 });
+
+it('offers answer starters under each follow-up question', function () {
+    [$order] = orderWaitingForAnswer($this);
+
+    $this->get(route('orders.show', $order->public_id))
+        ->assertOk()
+        ->assertSee('data-starter="For example, …"', false)
+        ->assertSee('data-starter-target="f-answers-q1"', false);
+});

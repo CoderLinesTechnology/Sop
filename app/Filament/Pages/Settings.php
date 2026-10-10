@@ -9,6 +9,7 @@ use App\Filament\Support\Catalogue\FormRules;
 use App\Filament\Support\Catalogue\MediaUpload;
 use App\Filament\Support\Catalogue\SettingsSchema;
 use App\Filament\Support\Catalogue\SystemHealth;
+use App\Models\ServiceField;
 use App\Support\Audit;
 use App\Support\Money;
 use App\Support\Settings as SiteSettings;
@@ -226,6 +227,13 @@ class Settings extends Page
                             ])
                             ->required()
                             ->native(false),
+                        TagsInput::make('orders.followup_starters')
+                            ->label('Answer starters for follow-up questions')
+                            ->placeholder('Add a starter and press Enter')
+                            ->nestedRecursiveRules(['string', 'max:'.ServiceField::MAX_STARTER_LENGTH])
+                            ->rules(['array', 'max:'.ServiceField::MAX_STARTERS])
+                            ->helperText('Shown under every follow-up question so customers can start an answer with one tap. Use … where they fill in. Plain text, no AI.')
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
             ]);

@@ -37,7 +37,7 @@ final class SettingsSchema
         'general.social_youtube',
         'orders.delivery_min_minutes', 'orders.delivery_max_minutes', 'orders.max_file_size_mb', 'orders.allowed_file_types',
         'orders.max_files_per_order', 'orders.order_link_days', 'orders.payment_expiry_hours', 'orders.draft_expiry_hours',
-        'orders.needs_info_reminder_hours', 'orders.needs_info_timeout_hours', 'orders.needs_info_timeout_action',
+        'orders.needs_info_reminder_hours', 'orders.needs_info_timeout_hours', 'orders.needs_info_timeout_action', 'orders.followup_starters',
         'orders.retention_days',
         'payments.allow_free_orders',
         'ai.daily_budget_usd', 'ai.banned_phrases',

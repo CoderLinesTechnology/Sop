@@ -12,6 +12,7 @@ use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -150,6 +151,13 @@ final class ServiceFieldSchema
                 ->label('Placeholder')
                 ->maxLength(255)
                 ->hidden(fn (Get $get): bool => in_array(self::type($get('type')), [FieldType::File, FieldType::Checkbox, FieldType::Radio, FieldType::MultiSelect], true)),
+
+            TagsInput::make('options.starters')
+                ->label('Answer starters')
+                ->placeholder('Add a starter and press Enter')
+                ->nestedRecursiveRules(['string', 'max:'.ServiceField::MAX_STARTER_LENGTH])
+                ->helperText('Up to '.ServiceField::MAX_STARTERS.' sentence starters the customer can click to begin their answer, e.g. "I first became interested in … when …". Plain text, no AI.')
+                ->visible(fn (Get $get): bool => self::type($get('type')) === FieldType::Textarea),
 
             // ----- Choices (dropdown / radio / multiple choice)
             Repeater::make('options.choices')
