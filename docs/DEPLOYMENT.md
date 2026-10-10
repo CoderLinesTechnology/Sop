@@ -130,6 +130,23 @@ If your server cannot reach its own public address (some firewalls block it),
 set `RUNTIME_LOOPBACK_URL=http://127.0.0.1` in `.env`. The heartbeat and the
 customer's status page also keep orders moving if self-requests fail.
 
+**Hosts that stop long web requests.** Some shared hosts end every web PHP
+process a couple of minutes after it started, even after the page was sent
+(Hostinger's LiteSpeed stops it after about 120 seconds). One AI stage can take
+longer, so the pipeline never gets past it. On such hosts set
+
+```
+RUNTIME_PIPELINE_DRIVER=process
+RUNTIME_PHP_BINARY=/usr/bin/php
+```
+
+and run `php artisan optimize`. Pipeline work then runs in a detached
+command-line process (`php artisan statementra:pipeline-run {job}`), started by
+the web request through `proc_open`. That process is not subject to the web time
+limit, and it is still not a queue or cron. `RUNTIME_PHP_BINARY` must be the CLI
+binary (`which php` over SSH). If no process can be started, the app logs
+"Background process unavailable" and falls back to working inside requests.
+
 ## VPS or dedicated server (Nginx + PHP-FPM)
 
 The same steps apply. A minimal Nginx site:
@@ -182,6 +199,7 @@ php artisan up
 | Symptom | Check |
 | --- | --- |
 | Orders stay at "Payment confirmed" | Admin → Settings → System: is the heartbeat recent? Set up the uptime ping. If self-requests fail (`storage/logs`), set `RUNTIME_LOOPBACK_URL`. |
+| Orders stuck in one AI stage, log shows "AI stage attempt was interrupted" | The host stops long web requests: set `RUNTIME_PIPELINE_DRIVER=process` (see "How background work runs"). |
 | Payments not confirmed | Paystack webhook URL and keys; Admin → Payments shows each webhook and its processing notes. |
 | Emails not arriving | SMTP settings; Admin → Emails shows each attempt and error; failed sends are retried automatically. |
 | Blank or unstyled admin panel | Run `php artisan filament:assets` and `php artisan optimize`. |

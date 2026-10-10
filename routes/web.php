@@ -75,6 +75,8 @@ Route::middleware(['throttle:order-access', 'order.access'])->prefix('/o/{order}
     Route::get('/', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/progress', [OrderController::class, 'progress'])->name('orders.progress');
     Route::get('/documents/{version}/{format}', [OrderController::class, 'download'])->whereUuid('version')->whereIn('format', ['pdf', 'docx'])->name('orders.download');
+    // Reloading the page after answering re-requests the form's address: show the order instead of an error.
+    Route::get('/information', [OrderController::class, 'informationPage'])->name('orders.information.page');
     Route::middleware('throttle:order-actions')->group(function () {
         Route::post('/information', [OrderController::class, 'answerInformation'])->name('orders.information');
         Route::post('/revisions', [OrderController::class, 'requestRevision'])->name('orders.revisions.store');

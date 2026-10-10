@@ -114,6 +114,11 @@ class InformationRequestService
         $order = $request->order;
 
         DB::transaction(function () use ($request, $clean, $order) {
+            // Two submissions at once: only the first may save and resume.
+            if (InformationRequest::query()->whereKey($request->id)->lockForUpdate()->value('status') !== 'open') {
+                throw new InvalidArgumentException('This question has already been answered.');
+            }
+
             $request->forceFill(['answers' => $clean, 'status' => 'answered', 'answered_at' => now()])->save();
 
             foreach ($request->questions as $question) {

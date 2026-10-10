@@ -101,17 +101,32 @@ class OrderController extends Controller
         ]);
     }
 
+    public function informationPage(Request $request): RedirectResponse
+    {
+        return redirect()->route('orders.show', $this->order($request)->public_id);
+    }
+
     public function answerInformation(Request $request, InformationRequestService $service): RedirectResponse
     {
         $order = $this->order($request);
         $informationRequest = $order->openInformationRequest;
-        abort_if($informationRequest === null, 404);
+
+        // Already answered (the form was sent twice, or resent from an old tab): nothing left to save.
+        if ($informationRequest === null) {
+            return redirect()->route('orders.show', $order->public_id)->with('status', $order->informationRequests()->where('status', 'answered')->exists()
+                ? "We've already received your answer and are working on your document."
+                : 'There are no open questions on this order.');
+        }
 
         $request->validate(['answers' => ['required', 'array'], 'answers.*' => ['nullable', 'string', 'max:3000']]);
 
         try {
             $service->answer($informationRequest, (array) $request->input('answers'));
         } catch (InvalidArgumentException $e) {
+            if (! $informationRequest->fresh()?->isOpen()) {
+                return redirect()->route('orders.show', $order->public_id)->with('status', "We've already received your answer and are working on your document.");
+            }
+
             return back()->withErrors(['answers' => $e->getMessage()]);
         }
 

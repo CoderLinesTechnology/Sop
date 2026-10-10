@@ -102,7 +102,7 @@
                         <x-ui.icon-badge icon="message" color="yellow" size="lg" />
                         <h1 id="info-heading" class="display-2 mt-5">We need one more detail to make your document stronger.</h1>
                         <p class="lead mt-3">We never invent information, so a quick answer helps us write something accurate and specific to you.</p>
-                        <form method="POST" action="{{ route('orders.information', $order->public_id) }}" class="mt-6 space-y-5">
+                        <form method="POST" action="{{ route('orders.information', $order->public_id) }}" class="mt-6 space-y-5" data-submit-once>
                             @csrf
                             @foreach ($informationRequest->questions as $question)
                                 <div>

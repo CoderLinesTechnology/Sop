@@ -40,7 +40,7 @@ Page views / status polling / uptime ping ──► Heartbeat: retries, reconcil
 | `app/Domain/Documents` | Requirements & templates, `DocumentModel`, PDF/DOCX renderers, file QA |
 | `app/Domain/Notifications` | `AdminNotifier` (Filament database notifications + email + webhook) |
 | `app/Support` | `Settings` (admin settings, cached), `Money`, `Audit`, `SecurityLog`, `Analytics`, `SafeHttp` |
-| `app/Support/Runtime` | `AfterResponse`, `SelfTrigger`, `Heartbeat`: the request-driven runtime |
+| `app/Support/Runtime` | `AfterResponse`, `SelfTrigger`, `Heartbeat`, `BackgroundProcess`: the request-driven runtime |
 | `app/Domain/Maintenance` | Heartbeat tasks: draft pruning, information-request reminders, retention purge, log pruning |
 | `app/Filament` | Admin panel resources, pages and widgets |
 | `app/Http` | Public controllers, middleware (`SecurityHeaders`, `AuthorizeOrderAccess`, ...) |
@@ -90,7 +90,7 @@ is `sync` and the codebase contains no queued jobs.
 | Need | How it runs |
 | --- | --- |
 | Slow work triggered by a request (emails, upload text extraction, webhook processing, admin alerts) | `AfterResponse::run($label, fn () => ...)`: Laravel `defer()` with `ignore_user_abort` and a time limit. PHP-FPM / LiteSpeed release the visitor's connection first. In console and tests it runs at once (after the surrounding transaction commits). |
-| The AI pipeline (minutes of work) | `PipelineDispatcher::kick()` runs stages after the response; when its time budget is spent the worker calls `SelfTrigger::fire('internal.pipeline.continue')`, an HMAC-signed POST to the app itself, so the next stage gets a fresh PHP request. Jobs are claimed with a lease (`ai_jobs.leased_until`), retries wait in `ai_jobs.next_run_at`. The customer's status-page polling calls `kickIfDue()`. |
+| The AI pipeline (minutes of work) | `PipelineDispatcher::kick()` runs stages after the response; when its time budget is spent the worker calls `SelfTrigger::fire('internal.pipeline.continue')`, an HMAC-signed POST to the app itself, so the next stage gets a fresh PHP request. Jobs are claimed with a lease (`ai_jobs.leased_until`), retries wait in `ai_jobs.next_run_at`. The customer's status-page polling calls `kickIfDue()`. With `statementra.runtime.pipeline_driver = process` (hosts that stop web PHP after ~2 minutes, e.g. Hostinger), `PipelineTrigger` instead starts `php artisan statementra:pipeline-run {job}` detached through `BackgroundProcess` (`proc_open`, `setsid`), at most once per job per minute; a second worker finds the job leased and exits. If no process starts, work falls back to the request. |
 | Retries and safety nets (payment events, emails, extraction, reconciliation, stalled pipelines, paid orders not yet started, IndexNow notifications) | Heartbeat tasks |
 | Housekeeping (draft pruning, information-request reminders/expiry, retention purge, log pruning) | Heartbeat tasks |
 

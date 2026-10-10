@@ -89,6 +89,40 @@ function initFormStartBeacon() {
     }, { passive: true });
 }
 
+/*
+ * Forms that must not be sent twice (a double click, or a click while the
+ * first request is still on its way) carry data-submit-once: the first submit
+ * goes through and the button is disabled until the next page loads.
+ */
+function initSubmitOnce() {
+    document.querySelectorAll('form[data-submit-once]').forEach((form) => {
+        let submitted = false;
+        form.addEventListener('submit', (event) => {
+            if (submitted) {
+                event.preventDefault();
+                return;
+            }
+            submitted = true;
+            form.setAttribute('aria-busy', 'true');
+            form.querySelectorAll('button[type="submit"]').forEach((button) => {
+                button.disabled = true;
+            });
+        });
+    });
+
+    // A page restored from the back/forward cache must be usable again.
+    window.addEventListener('pageshow', (event) => {
+        if (!event.persisted) return;
+        document.querySelectorAll('form[data-submit-once]').forEach((form) => {
+            form.removeAttribute('aria-busy');
+            form.querySelectorAll('button[type="submit"]').forEach((button) => {
+                button.disabled = false;
+            });
+        });
+    });
+}
+
 initNavigation();
 initCountdowns();
 initFormStartBeacon();
+initSubmitOnce();
