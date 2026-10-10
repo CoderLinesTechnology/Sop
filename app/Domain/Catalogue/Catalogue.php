@@ -141,6 +141,8 @@ class Catalogue
             Cache::forget(self::CACHE_TAG_PREFIX."testimonials:{$limit}");
             Cache::forget(self::CACHE_TAG_PREFIX."articles:featured:{$limit}");
         }
-        Cache::forget(self::CACHE_TAG_PREFIX.'sitemap');
+        foreach (['sitemap', 'llms', 'feed'] as $key) {
+            Cache::forget(self::CACHE_TAG_PREFIX.$key);
+        }
     }
 }

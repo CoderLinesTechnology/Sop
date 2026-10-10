@@ -73,11 +73,16 @@ final class Settings
             'security.rate_limit_orders_per_hour' => 12,
             'security.rate_limit_coupon_attempts_per_hour' => 15,
 
-            'seo.default_title' => 'Statementra — Personalized application documents, researched and written for you',
+            'seo.default_title' => 'Statementra: Personal Statement, SOP & CV Writing',
             'seo.title_suffix' => ' | Statementra',
-            'seo.default_description' => 'Get a personalized personal statement, statement of purpose, motivation letter or scholarship essay — researched around your programme, written around your real experience and delivered to your email in about 20–30 minutes.',
+            'seo.default_description' => 'Personal statements, SOPs, motivation letters and scholarship essays, researched around your programme and written from your real experience.',
             'seo.social_image' => null,
             'seo.google_site_verification' => null,
+            'seo.bing_site_verification' => null,
+            'seo.og_locale' => 'en_GB',
+            'seo.ai_search_crawlers' => true,
+            'seo.ai_training_crawlers' => true,
+            'seo.indexnow_enabled' => true,
 
             'analytics.enabled' => true,
             'analytics.respect_gpc' => true,

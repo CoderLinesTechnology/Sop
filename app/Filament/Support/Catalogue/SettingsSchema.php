@@ -46,6 +46,7 @@ final class SettingsSchema
         'security.admin_session_minutes', 'security.rate_limit_uploads_per_hour', 'security.rate_limit_orders_per_hour',
         'security.rate_limit_coupon_attempts_per_hour',
         'seo.default_title', 'seo.title_suffix', 'seo.default_description', 'seo.social_image', 'seo.google_site_verification',
+        'seo.bing_site_verification', 'seo.og_locale', 'seo.ai_search_crawlers', 'seo.ai_training_crawlers', 'seo.indexnow_enabled',
         'analytics.enabled', 'analytics.respect_gpc', 'analytics.retention_days',
     ];
 

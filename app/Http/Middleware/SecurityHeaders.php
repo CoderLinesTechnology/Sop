@@ -45,6 +45,14 @@ class SecurityHeaders
 
         if ($request->is('o/*', 'checkout/*', 'account*', 'start*') || $isAdmin) {
             $headers->set('Cache-Control', 'no-store, private');
+            // Kept out of search results by header, so robots.txt never has to name the admin path.
+            $headers->set('X-Robots-Tag', 'noindex, nofollow');
+        }
+
+        // Do not advertise the PHP version.
+        $headers->remove('X-Powered-By');
+        if (! headers_sent()) {
+            header_remove('X-Powered-By');
         }
 
         return $response;

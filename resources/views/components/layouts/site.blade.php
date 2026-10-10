@@ -12,6 +12,7 @@
     <meta name="robots" content="{{ $seo->index && app()->isProduction() ? 'index, follow' : 'noindex, nofollow' }}">
     <link rel="canonical" href="{{ $seo->canonicalUrl() }}">
     <meta property="og:site_name" content="{{ $siteName }}">
+    <meta property="og:locale" content="{{ $seo->locale() }}">
     <meta property="og:type" content="{{ $seo->type }}">
     <meta property="og:title" content="{{ $seo->fullTitle() }}">
     @if ($seo->description)
@@ -19,6 +20,17 @@
     @endif
     <meta property="og:url" content="{{ $seo->canonicalUrl() }}">
     <meta property="og:image" content="{{ $seo->imageUrl() }}">
+    @if ($imageSize = $seo->imageSize())
+        <meta property="og:image:width" content="{{ $imageSize[0] }}">
+        <meta property="og:image:height" content="{{ $imageSize[1] }}">
+    @endif
+    <meta property="og:image:alt" content="{{ $seo->title }}">
+    @if ($seo->publishedTime)
+        <meta property="article:published_time" content="{{ $seo->publishedTime }}">
+    @endif
+    @if ($seo->modifiedTime)
+        <meta property="article:modified_time" content="{{ $seo->modifiedTime }}">
+    @endif
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $seo->fullTitle() }}">
     @if ($seo->description)
@@ -28,6 +40,11 @@
     @if ($verification = \App\Support\Settings::get('seo.google_site_verification'))
         <meta name="google-site-verification" content="{{ $verification }}">
     @endif
+    @if ($bingVerification = \App\Support\Settings::get('seo.bing_site_verification'))
+        <meta name="msvalidate.01" content="{{ $bingVerification }}">
+    @endif
+    <link rel="alternate" type="application/atom+xml" title="{{ $siteName }} guides" href="{{ route('resources.feed') }}">
+    <link rel="manifest" href="{{ route('manifest') }}">
     <meta name="theme-color" content="#12403A">
     <link rel="icon" href="{{ asset('favicon.svg') }}?v=2" type="image/svg+xml">
     <link rel="icon" href="{{ asset('favicon.ico') }}?v=2" sizes="any">

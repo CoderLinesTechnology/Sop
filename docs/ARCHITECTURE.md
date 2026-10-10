@@ -91,7 +91,7 @@ is `sync` and the codebase contains no queued jobs.
 | --- | --- |
 | Slow work triggered by a request (emails, upload text extraction, webhook processing, admin alerts) | `AfterResponse::run($label, fn () => ...)`: Laravel `defer()` with `ignore_user_abort` and a time limit. PHP-FPM / LiteSpeed release the visitor's connection first. In console and tests it runs at once (after the surrounding transaction commits). |
 | The AI pipeline (minutes of work) | `PipelineDispatcher::kick()` runs stages after the response; when its time budget is spent the worker calls `SelfTrigger::fire('internal.pipeline.continue')`, an HMAC-signed POST to the app itself, so the next stage gets a fresh PHP request. Jobs are claimed with a lease (`ai_jobs.leased_until`), retries wait in `ai_jobs.next_run_at`. The customer's status-page polling calls `kickIfDue()`. |
-| Retries and safety nets (payment events, emails, extraction, reconciliation, stalled pipelines, paid orders not yet started) | Heartbeat tasks |
+| Retries and safety nets (payment events, emails, extraction, reconciliation, stalled pipelines, paid orders not yet started, IndexNow notifications) | Heartbeat tasks |
 | Housekeeping (draft pruning, information-request reminders/expiry, retention purge, log pruning) | Heartbeat tasks |
 
 **Heartbeat.** `App\Support\Runtime\Heartbeat` runs the tasks listed in

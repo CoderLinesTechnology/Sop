@@ -355,6 +355,20 @@ class Settings extends Page
                             ->helperText('1200 × 630 px recommended. JPEG, PNG or WebP, up to 5 MB.'),
                         TextInput::make('seo.google_site_verification')->label('Google Search Console verification code')->maxLength(120)
                             ->helperText('Only the content value of the meta tag.'),
+                        TextInput::make('seo.bing_site_verification')->label('Bing Webmaster Tools verification code')->maxLength(120)
+                            ->helperText('The content value of the msvalidate.01 meta tag. Bing also powers ChatGPT search.'),
+                        TextInput::make('seo.og_locale')->label('Language and region for social previews')->maxLength(10)
+                            ->regex('/^[a-z]{2}_[A-Z]{2}$/')->placeholder('en_GB'),
+                    ]),
+                Section::make('Search engines and AI assistants')
+                    ->description('Changes apply to robots.txt at once. The machine-readable summary for AI assistants is at /llms.txt.')
+                    ->schema([
+                        Toggle::make('seo.indexnow_enabled')->label('Notify search engines about new and changed pages (IndexNow)')
+                            ->helperText('Bing, Yandex, Seznam and Naver are told within minutes when a service, guide or page changes. Google reads the sitemap instead.'),
+                        Toggle::make('seo.ai_search_crawlers')->label('Allow AI search assistants (ChatGPT search, Perplexity, Claude, Apple)')
+                            ->helperText('They read pages to answer questions and link back to them. Turning this off removes the site from their answers.'),
+                        Toggle::make('seo.ai_training_crawlers')->label('Allow AI training crawlers (GPTBot, ClaudeBot, Google-Extended, Common Crawl...)')
+                            ->helperText('They collect public text to train AI models. Allowing them helps assistants know the brand; it does not bring visitors directly.'),
                     ]),
             ]);
     }

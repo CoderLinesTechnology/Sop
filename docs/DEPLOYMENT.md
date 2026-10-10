@@ -87,6 +87,16 @@ Build them on your computer or let GitHub Actions do it:
   token or secret in `.env`.
 - **OpenAI:** set `OPENAI_API_KEY`. Models, prompts and the daily AI budget are
   managed in Admin → AI Control Center.
+- **Search engines:** add the site to Google Search Console and Bing Webmaster Tools
+  (paste their verification codes in Admin → Settings → SEO) and submit
+  `https://statementra.com/sitemap.xml` in both. Bing, Yandex and other IndexNow
+  engines are told about new and changed pages automatically; run
+  `php artisan statementra:indexnow-submit-all` once after launch or a domain change.
+  AI assistants read `/llms.txt`; robots.txt rules for AI crawlers are switches on the
+  same settings page.
+- **Proxies:** leave `TRUSTED_PROXIES` empty unless the server sees a proxy's address
+  instead of the visitor's (Hostinger's CDN already passes the visitor's address). Links
+  are always built from `APP_URL`, never from forwarded host headers.
 
 ## 4. Sign in to the admin panel
 

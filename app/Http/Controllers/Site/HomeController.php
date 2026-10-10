@@ -23,8 +23,11 @@ class HomeController extends Controller
             ->withJsonLd(Seo::organization())
             ->withJsonLd([
                 '@type' => 'WebSite',
+                '@id' => url('/').'#website',
                 'name' => Settings::siteName(),
                 'url' => url('/'),
+                'inLanguage' => 'en',
+                'publisher' => ['@id' => Seo::organizationId()],
             ])
             ->withFaqs($faqs);
 

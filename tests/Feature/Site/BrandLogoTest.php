@@ -26,8 +26,9 @@ it('puts the logo at the top of every email as an absolute PNG link', function (
     $html = view('emails.layout', ['subject' => 'Your document is ready', 'content' => '<p>Hello</p>'])->render();
 
     expect($html)
-        ->toContain('src="'.asset('images/brand/statementra-logo-email.png').'"')
+        ->toContain('src="'.asset('images/brand/statementra-logo-email.png').'?v=2"')
         ->toContain('width="200" height="56" alt="Statementra"')
+        ->toContain('<td bgcolor="#FFFFFF" style="padding:20px 28px;')
         ->and(asset('images/brand/statementra-logo-email.png'))->toStartWith('http');
 });
 
@@ -49,7 +50,10 @@ it('ships the brand files at the sizes the markup declares, with nothing executa
             ->and(abs((float) $box[1] / (float) $box[2] - 143 / 40))->toBeLessThan(0.02);
     }
 
-    expect(getimagesize(public_path('images/brand/statementra-logo-email.png')))->toMatchArray([0 => 400, 1 => 112])
+    // The email logo is opaque (white background) so dark-mode clients cannot hide it; the avatar is a square.
+    expect(getimagesize(public_path('images/brand/statementra-logo-email.png')))->toMatchArray([0 => 400, 1 => 112, 'mime' => 'image/png'])
+        ->and(ord(file_get_contents(public_path('images/brand/statementra-logo-email.png'))[25]))->toBe(2) // PNG colour type 2 = RGB, no alpha
+        ->and(getimagesize(public_path('images/brand/statementra-avatar.png')))->toMatchArray([0 => 1024, 1 => 1024])
         ->and(getimagesize(public_path('apple-touch-icon.png')))->toMatchArray([0 => 180, 1 => 180])
         ->and(file_get_contents(public_path('favicon.svg')))->not->toMatch('/<script|\son\w+=|href=/i');
 });

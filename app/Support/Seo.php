@@ -12,6 +12,14 @@ use Illuminate\Support\Str;
  */
 final class Seo
 {
+    /** Titles longer than this are shown without the site-name suffix (search results cut them off). */
+    public const MAX_TITLE = 60;
+
+    /** The default social image (public/images/brand), 1200x630 as social networks expect. */
+    public const DEFAULT_IMAGE = 'images/brand/statementra-social.jpg';
+
+    public const DEFAULT_IMAGE_SIZE = [1200, 630];
+
     /** @param list<array<string, mixed>> $jsonLd */
     public function __construct(
         public string $title,
@@ -21,6 +29,8 @@ final class Seo
         public bool $index = true,
         public array $jsonLd = [],
         public string $type = 'website',
+        public ?string $publishedTime = null,
+        public ?string $modifiedTime = null,
     ) {}
 
     public static function make(?string $title = null, ?string $description = null, bool $index = true): self
@@ -39,7 +49,20 @@ final class Seo
             return $this->title;
         }
 
-        return $this->title.Settings::get('seo.title_suffix', ' | '.$site);
+        $full = $this->title.Settings::get('seo.title_suffix', ' | '.$site);
+
+        return mb_strlen($full) <= self::MAX_TITLE ? $full : $this->title;
+    }
+
+    public function locale(): string
+    {
+        return (string) Settings::get('seo.og_locale', 'en_GB');
+    }
+
+    /** Width and height of the social image, when it is the default one (other sizes are unknown). */
+    public function imageSize(): ?array
+    {
+        return ($this->image ?? Settings::get('seo.social_image')) ? null : self::DEFAULT_IMAGE_SIZE;
     }
 
     public function withJsonLd(array $data): self
@@ -58,7 +81,7 @@ final class Seo
     {
         $image = $this->image ?? Settings::get('seo.social_image');
         if (! $image) {
-            return asset('images/home/hero.webp');
+            return asset(self::DEFAULT_IMAGE);
         }
 
         return str_starts_with($image, 'http') ? $image : (str_starts_with($image, 'images/') ? asset($image) : Storage::disk(config('statementra.storage.public_disk', 'public'))->url($image));
@@ -76,12 +99,32 @@ final class Seo
         return array_filter([
             '@context' => 'https://schema.org',
             '@type' => 'Organization',
+            '@id' => self::organizationId(),
             'name' => Settings::siteName(),
             'url' => url('/'),
-            'logo' => asset('favicon.svg'),
+            // Search engines want a raster logo of at least 112x112 px.
+            'logo' => ['@type' => 'ImageObject', 'url' => asset('icon-512.png'), 'width' => 512, 'height' => 512],
+            'description' => Settings::get('general.tagline') ?: null,
             'email' => Settings::supportEmail(),
+            'contactPoint' => [[
+                '@type' => 'ContactPoint',
+                'contactType' => 'customer support',
+                'email' => Settings::supportEmail(),
+                'availableLanguage' => ['English'],
+            ]],
             'sameAs' => $socials ?: null,
         ]);
+    }
+
+    public static function organizationId(): string
+    {
+        return url('/').'#organization';
+    }
+
+    /** A reference to the Organization for other structured data (provider, publisher, seller). */
+    public static function organizationRef(): array
+    {
+        return ['@type' => 'Organization', '@id' => self::organizationId(), 'name' => Settings::siteName(), 'url' => url('/')];
     }
 
     /** @param list<array{0:string,1:string}> $crumbs [label, url] */

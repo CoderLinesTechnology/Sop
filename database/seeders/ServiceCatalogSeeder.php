@@ -76,7 +76,7 @@ class ServiceCatalogSeeder extends Seeder
                 'price' => 8900,
                 'compare_at_price' => 12000,
                 'default_word_limit' => 650,
-                'seo_title' => 'Personal Statement Writing Service — Researched & Personalized',
+                'seo_title' => 'Personal Statement Writing Service, Researched for You',
                 'seo_description' => 'A personal statement built around your real story and researched around your programme. PDF + Word delivered to your email in about 20–30 minutes.',
                 'writing_guidance' => 'Lead with a specific, genuine moment or question from the applicant\'s own experience. Show the development of their interest through concrete evidence, connect it to the specific programme, and close with realistic goals.',
                 'fields' => [...$this->detailFields(), ...$this->applicationFields(), ...$this->uploadFields(), ...[
@@ -207,7 +207,7 @@ class ServiceCatalogSeeder extends Seeder
                 'default_word_limit' => 400,
                 'seo_title' => 'Cover Letter Writing Service — Tailored to Every Role',
                 'seo_description' => 'A professional cover letter researched around the employer and role, highlighting your strongest evidence. PDF + Word delivered by email.',
-                'writing_guidance' => "Write as a formal letter (salutation, body, closing). Open with a clear, specific connection to the role. Evidence each claim with a concrete achievement or experience. Keep it to one page. Mirror the language of the job description naturally, without keyword-stuffing.",
+                'writing_guidance' => 'Write as a formal letter (salutation, body, closing). Open with a clear, specific connection to the role. Evidence each claim with a concrete achievement or experience. Keep it to one page. Mirror the language of the job description naturally, without keyword-stuffing.',
                 'fields' => [...$this->detailFields(), ...[
                     ['key' => 'company', 'label' => 'Company / Organisation', 'type' => 'text', 'section' => 'application', 'requirement' => 'required', 'maps_to' => FieldMapping::Institution->value, 'placeholder' => 'e.g. Google, Deloitte, UNICEF', 'validation' => ['max_length' => 200], 'width' => 'half'],
                     ['key' => 'job_title', 'label' => 'Job title / Role', 'type' => 'text', 'section' => 'application', 'requirement' => 'required', 'placeholder' => 'e.g. Marketing Manager, Software Engineer', 'validation' => ['max_length' => 200], 'width' => 'half'],
@@ -239,7 +239,7 @@ class ServiceCatalogSeeder extends Seeder
                 'default_word_limit' => 800,
                 'seo_title' => 'Professional Resume / CV Writing Service',
                 'seo_description' => 'A professionally written resume or CV tailored to your target role, ATS-optimised and formatted. PDF + Word delivered by email.',
-                'writing_guidance' => "Use reverse-chronological format unless a functional format is clearly better. Lead each role with a strong action verb and quantify results wherever possible. Keep formatting clean and ATS-compatible. Tailor the summary and skills to the target role or industry. Never fabricate or embellish experience.",
+                'writing_guidance' => 'Use reverse-chronological format unless a functional format is clearly better. Lead each role with a strong action verb and quantify results wherever possible. Keep formatting clean and ATS-compatible. Tailor the summary and skills to the target role or industry. Never fabricate or embellish experience.',
                 'fields' => [...$this->detailFields(), ...[
                     ['key' => 'target_role', 'label' => 'Target role or job title', 'type' => 'text', 'section' => 'application', 'requirement' => 'recommended', 'placeholder' => 'e.g. Product Manager, Data Analyst', 'validation' => ['max_length' => 200], 'width' => 'half'],
                     ['key' => 'industry', 'label' => 'Target industry', 'type' => 'text', 'section' => 'application', 'requirement' => 'optional', 'placeholder' => 'e.g. Finance, Healthcare, Technology', 'validation' => ['max_length' => 200], 'width' => 'half'],

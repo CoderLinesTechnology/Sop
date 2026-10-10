@@ -1,11 +1,14 @@
 <?php
 
+use App\Domain\Seo\IndexNow;
 use App\Enums\AdminRole;
+use App\Http\Controllers\Site\SeoController;
 use App\Models\AdminUser;
 use App\Support\Audit;
 use App\Support\Runtime\Heartbeat;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /*
@@ -49,3 +52,22 @@ Artisan::command('statementra:create-admin {email} {--name= : Display name} {--r
     Audit::log('admin.created_from_console', $admin, meta: ['role' => $role->value]);
     $this->info("Administrator {$admin->email} ({$role->value}) is ready. They will set up two-factor authentication at first sign-in.");
 })->purpose('Create (or reset the password of) an admin panel account');
+
+Artisan::command('statementra:indexnow-submit-all', function () {
+    $indexNow = app(IndexNow::class);
+    if (! $indexNow->enabled()) {
+        $this->warn('IndexNow is off (it only runs in production, and can be switched off in Admin → Settings → SEO).');
+
+        return 1;
+    }
+
+    // Every URL in the sitemap: published, indexable pages only.
+    preg_match_all('~<loc>([^<]+)</loc>~', (string) app(SeoController::class)->sitemap()->getContent(), $matches);
+    $urls = array_map(fn (string $url) => html_entity_decode($url, ENT_QUOTES | ENT_XML1), $matches[1]);
+    $indexNow->queue($urls); // sent at once from the console; failures stay pending for the heartbeat
+    $indexNow->sendDue();
+
+    $statuses = DB::table('search_pings')->whereIn('url_hash', array_map(fn (string $url) => hash('sha256', $url), $urls))
+        ->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+    $this->info(count($urls).' pages announced: '.$statuses->map(fn ($total, $status) => "{$total} {$status}")->implode(', ').'.');
+})->purpose('Announce every public page to IndexNow search engines (after launch or a domain change)');

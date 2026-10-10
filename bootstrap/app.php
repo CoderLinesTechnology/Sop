@@ -20,14 +20,17 @@ return Application::configure(basePath: dirname(__DIR__))
         then: fn () => Route::group([], __DIR__.'/../routes/internal.php'),
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Behind a load balancer / CDN (e.g. Cloudflare) the client IP and scheme come from forwarded headers.
+        // Which proxies may describe the client (IP, scheme, port) comes from config/trustedproxy.php,
+        // read per request. The forwarded Host is never trusted: links always use APP_URL.
         $middleware->trustProxies(
-            at: env('TRUSTED_PROXIES', '*'),
-            headers: SymfonyRequest::HEADER_X_FORWARDED_FOR | SymfonyRequest::HEADER_X_FORWARDED_HOST
-                | SymfonyRequest::HEADER_X_FORWARDED_PORT | SymfonyRequest::HEADER_X_FORWARDED_PROTO,
+            headers: SymfonyRequest::HEADER_X_FORWARDED_FOR | SymfonyRequest::HEADER_X_FORWARDED_PORT
+                | SymfonyRequest::HEADER_X_FORWARDED_PROTO,
         );
 
         $middleware->append(SecurityHeaders::class);
+
+        // Signed-out customers who open an account page sign in first (the admin panel has its own login).
+        $middleware->redirectGuestsTo(fn () => route('account.login'));
 
         // No cron needed: page views drive the maintenance heartbeat (after the response is sent).
         $middleware->appendToGroup('web', RunHeartbeat::class);

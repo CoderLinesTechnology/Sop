@@ -50,8 +50,8 @@ class ContentSeeder extends Seeder
             'home' => [
                 'title' => 'Home',
                 'kind' => 'home',
-                'seo_title' => 'Statementra — Personalized application documents, researched and written for you',
-                'seo_description' => 'Personal statements, statements of purpose, motivation letters and scholarship essays researched around your programme and written around your real experience. Delivered by email in about 20–30 minutes.',
+                'seo_title' => 'Statementra: Personal Statement, SOP & CV Writing',
+                'seo_description' => 'Personal statements, SOPs, motivation letters and scholarship essays, researched around your programme and written from your real experience.',
                 'sections' => [
                     'hero' => [
                         'title' => 'Your story deserves more than a generic essay.',
@@ -121,7 +121,7 @@ class ContentSeeder extends Seeder
             'services' => [
                 'title' => 'Services',
                 'kind' => 'landing',
-                'seo_title' => 'Services — Personal Statements, SOPs, Motivation Letters & Scholarship Essays',
+                'seo_title' => 'Application Writing Services: Statements, Essays & CVs',
                 'seo_description' => 'Choose the application document you need. Every service includes programme research, personalized writing, fact-checking and professional formatting.',
                 'sections' => [
                     'hero' => [
@@ -187,8 +187,8 @@ class ContentSeeder extends Seeder
             'how-it-works' => [
                 'title' => 'How It Works',
                 'kind' => 'landing',
-                'seo_title' => 'How Statementra Works — Research, Writing, Verification, Delivery',
-                'seo_description' => 'Tell us what you are applying for, share your background and pay securely. We research, write, verify and format your document and email it to you in about 20–30 minutes.',
+                'seo_title' => 'How Statementra Works: Research, Writing and Delivery',
+                'seo_description' => 'Tell us what you\'re applying for and pay securely. We research, write, fact-check and format your document, then email it to you in about 20–30 minutes.',
                 'sections' => [
                     'hero' => [
                         'eyebrow' => 'How it works',
@@ -210,7 +210,7 @@ class ContentSeeder extends Seeder
                 'title' => 'About Statementra',
                 'kind' => 'standard',
                 'excerpt' => 'Your story. Researched. Written. Refined.',
-                'seo_title' => 'About Statementra',
+                'seo_title' => 'About Statementra: Researched, Personal Application Writing',
                 'seo_description' => 'Statementra combines programme research, careful verification and professional writing to produce personalized application documents.',
                 'body' => <<<'MD'
 Statementra is a premium application-writing service. We help applicants turn their real experience into clear, specific, well-researched application documents — personal statements, statements of purpose, motivation letters, scholarship essays and more.
@@ -241,32 +241,36 @@ MD,
             'contact' => [
                 'title' => 'Contact & Support',
                 'kind' => 'landing',
-                'seo_title' => 'Contact Statementra Support',
+                'seo_title' => 'Contact Statementra: Help With an Order or a Service',
                 'seo_description' => 'Questions about an order or our services? Contact Statementra support — include your order reference if you have one.',
                 'sections' => ['hero' => ['eyebrow' => 'Support', 'title' => 'How can we help?', 'text' => "Questions about an order or our services? Send us a message — include your order reference if you have one and we'll get back to you as soon as possible."]],
             ],
             'privacy-policy' => [
                 'title' => 'Privacy Policy',
                 'kind' => 'legal',
-                'seo_title' => 'Privacy Policy',
+                'seo_title' => 'Privacy Policy: How Statementra Handles Your Data',
+                'seo_description' => 'How Statementra collects, uses, protects and deletes your personal data and uploaded documents, and the rights you have over them.',
                 'body' => $this->privacyPolicy(),
             ],
             'terms' => [
                 'title' => 'Terms of Service',
                 'kind' => 'legal',
-                'seo_title' => 'Terms of Service',
+                'seo_title' => 'Terms of Service: Ordering, Delivery and Revisions',
+                'seo_description' => 'The terms for ordering from Statementra: what we deliver, delivery times, revisions, payments and your responsibilities when you use the service.',
                 'body' => $this->terms(),
             ],
             'refund-policy' => [
                 'title' => 'Refund Policy',
                 'kind' => 'legal',
-                'seo_title' => 'Refund Policy',
+                'seo_title' => 'Refund Policy: When and How Statementra Refunds',
+                'seo_description' => 'When Statementra orders can be refunded, how to ask for a refund and how refunds are paid back to you through Paystack.',
                 'body' => $this->refundPolicy(),
             ],
             'cookie-policy' => [
                 'title' => 'Cookie Policy',
                 'kind' => 'legal',
-                'seo_title' => 'Cookie Policy',
+                'seo_title' => 'Cookie Policy: Cookies Used on Statementra',
+                'seo_description' => 'Which cookies Statementra uses, why we use them and how you can control or delete them in your browser settings.',
                 'body' => $this->cookiePolicy(),
             ],
         ];

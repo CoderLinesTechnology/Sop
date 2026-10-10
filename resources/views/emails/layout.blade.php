@@ -13,8 +13,15 @@
         <td align="center" style="padding:32px 16px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
                 <tr>
-                    <td style="padding:0 4px 20px 4px;">
-                        <img src="{{ asset('images/brand/statementra-logo-email.png') }}" width="200" height="56" alt="{{ $siteName }}" style="display:block;border:0;outline:none;text-decoration:none;height:auto;max-width:200px;font-family:Georgia,'Times New Roman',serif;font-size:24px;color:#12403A;">
+                    <td style="padding:0 0 16px 0;">
+                        {{-- The logo sits on a white panel (and the PNG itself is opaque white) so it stays legible on every background, dark mode included. --}}
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #E6E1D8;border-radius:10px;">
+                            <tr>
+                                <td bgcolor="#FFFFFF" style="padding:20px 28px;border-radius:10px;">
+                                    <img src="{{ asset('images/brand/statementra-logo-email.png') }}?v=2" width="200" height="56" alt="{{ $siteName }}" style="display:block;border:0;outline:none;text-decoration:none;height:auto;max-width:200px;font-family:Georgia,'Times New Roman',serif;font-size:24px;color:#12403A;">
+                                </td>
+                            </tr>
+                        </table>
                     </td>
                 </tr>
                 <tr>

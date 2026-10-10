@@ -32,6 +32,7 @@ Route::middleware('track')->group(function () {
     Route::get('/how-it-works', [PageController::class, 'howItWorks'])->name('pages.how-it-works');
     Route::get('/faq', [PageController::class, 'faq'])->name('pages.faq');
     Route::get('/resources', [ArticleController::class, 'index'])->name('resources.index');
+    Route::get('/resources/feed.xml', [SeoController::class, 'feed'])->name('resources.feed');
     Route::get('/resources/category/{slug}', [ArticleController::class, 'category'])->name('resources.category');
     Route::get('/resources/{slug}', [ArticleController::class, 'show'])->name('resources.show');
     Route::get('/contact', [ContactController::class, 'show'])->name('contact.show');
@@ -109,6 +110,9 @@ Route::post('/webhooks/email/{provider}', EmailWebhookController::class)->whereI
 Route::post('/beacon', BeaconController::class)->middleware('throttle:beacon')->name('beacon');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
+Route::get('/llms.txt', [SeoController::class, 'llms'])->name('llms');
+Route::get('/site.webmanifest', [SeoController::class, 'manifest'])->name('manifest');
+Route::get('/{key}.txt', [SeoController::class, 'indexNowKey'])->where('key', '[a-f0-9]{32}')->name('indexnow.key');
 
 /*
 |--------------------------------------------------------------------------

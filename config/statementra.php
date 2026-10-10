@@ -12,6 +12,7 @@ use App\Domain\Maintenance\PurgeExpiredOrderData;
 use App\Domain\Payments\Tasks\ProcessPendingPaymentEvents;
 use App\Domain\Payments\Tasks\ReconcilePayments;
 use App\Domain\Payments\Tasks\StartPendingFulfilment;
+use App\Domain\Seo\Tasks\SendIndexNowPings;
 
 /*
 |--------------------------------------------------------------------------
@@ -107,6 +108,11 @@ return [
         'turnstile_secret_key' => env('TURNSTILE_SECRET_KEY'),
     ],
 
+    'seo' => [
+        // IndexNow notifications are only sent from production; tests switch this on to exercise them.
+        'indexnow_outside_production' => (bool) env('INDEXNOW_OUTSIDE_PRODUCTION', false),
+    ],
+
     'monitoring' => [
         'alert_webhook_url' => env('ALERT_WEBHOOK_URL'),
     ],
@@ -143,6 +149,7 @@ return [
             'orders.prune-drafts' => [3600, PruneAbandonedDrafts::class],
             'orders.purge-expired' => [21600, PurgeExpiredOrderData::class],
             'system.prune-logs' => [86400, PruneOperationalData::class],
+            'seo.indexnow' => [600, SendIndexNowPings::class],
         ],
     ],
 ];

@@ -7,6 +7,7 @@ use App\Domain\Payments\Paystack\MockPaystackGateway;
 use App\Domain\Payments\Paystack\PaystackClient;
 use App\Domain\Payments\Paystack\PaystackGateway;
 use App\Domain\Pricing\PromotionResolver;
+use App\Domain\Seo\ContentChanges;
 use App\Models\Article;
 use App\Models\ArticleCategory;
 use App\Models\Faq;
@@ -21,6 +22,7 @@ use App\View\Composers\SiteLayoutComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -53,6 +55,9 @@ class AppServiceProvider extends ServiceProvider
     {
         if ($this->app->isProduction()) {
             URL::forceHttps(str_starts_with((string) config('app.url'), 'https://'));
+            // Every generated link (emails, canonical URLs, sitemap) uses APP_URL, whatever host the request named.
+            URL::forceRootUrl(rtrim((string) config('app.url'), '/'));
+            Paginator::currentPathResolver(fn (): string => url()->current());
             $this->guardProductionConfiguration();
         }
 
@@ -72,6 +77,9 @@ class AppServiceProvider extends ServiceProvider
             $model::saved(fn () => Catalogue::flush());
             $model::deleted(fn () => Catalogue::flush());
         }
+
+        // New and changed public pages are announced to IndexNow search engines.
+        ContentChanges::register();
 
         // Custom pages are cached under their slug; forget the old slug after a rename too.
         $forgetPage = fn (Page $page) => collect([$page->slug, $page->getOriginal('slug')])
