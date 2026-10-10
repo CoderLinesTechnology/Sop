@@ -29,6 +29,7 @@ return new class extends Migration
             $table->integer('priority')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamp('rights_confirmed_at')->nullable();
+            $table->foreignId('rights_confirmed_by_admin_id')->nullable()->constrained('admin_users')->nullOnDelete();
             $table->foreignId('created_by_admin_id')->nullable()->constrained('admin_users')->nullOnDelete();
             $table->timestamps();
 

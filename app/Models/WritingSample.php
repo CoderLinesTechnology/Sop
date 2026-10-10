@@ -22,7 +22,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'title', 'document_kind', 'degree_level', 'field_of_study', 'country_code', 'notes', 'content', 'word_count',
-    'source', 'redactions', 'priority', 'is_active', 'rights_confirmed_at', 'created_by_admin_id',
+    'source', 'redactions', 'priority', 'is_active', 'rights_confirmed_at', 'rights_confirmed_by_admin_id',
+    'created_by_admin_id',
 ])]
 #[Hidden(['content'])]
 class WritingSample extends Model
@@ -53,6 +54,12 @@ class WritingSample extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(AdminUser::class, 'created_by_admin_id');
+    }
+
+    /** The administrator who last confirmed the sample may be used (on creation or file replacement). */
+    public function rightsConfirmedBy(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'rights_confirmed_by_admin_id');
     }
 
     public function scopeActive(Builder $query): void

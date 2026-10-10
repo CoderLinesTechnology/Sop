@@ -65,22 +65,19 @@ final class WritingSampleData
         $file = self::uploaded($upload);
 
         try {
-            if (! $file) {
-                return $importer->fromText((string) $text) + ['source' => WritingSample::SOURCE_PASTED];
-            }
-
-            $imported = $importer->fromUpload($file) + ['source' => WritingSample::SOURCE_UPLOAD];
+            return $file
+                ? $importer->fromUpload($file) + ['source' => WritingSample::SOURCE_UPLOAD]
+                : $importer->fromText((string) $text) + ['source' => WritingSample::SOURCE_PASTED];
         } catch (UploadRejected $e) {
             throw ValidationException::withMessages(['data.'.($file ? $fileField : $textField) => $e->getMessage()]);
+        } finally {
+            // Only the text is kept: remove Livewire's temporary copy of the file now, accepted
+            // or not, instead of leaving it until the temporary-upload cleanup runs. Pages
+            // clear the field when the import fails, so the file is chosen again.
+            if ($file instanceof TemporaryUploadedFile) {
+                $file->delete();
+            }
         }
-
-        // Only the text is kept: remove Livewire's temporary copy of the file now
-        // instead of leaving it until the temporary-upload cleanup runs.
-        if ($file instanceof TemporaryUploadedFile) {
-            $file->delete();
-        }
-
-        return $imported;
     }
 
     /** A short description of where the text came from, for the edit page. */
@@ -96,7 +93,7 @@ final class WritingSampleData
         $parts[] = $redacted !== [] ? 'removed automatically: '.implode(', ', $redacted) : 'no contact details found';
 
         if ($sample->rights_confirmed_at) {
-            $by = $sample->createdBy()->value('name');
+            $by = $sample->rightsConfirmedBy()->value('name');
             $parts[] = 'permission confirmed '.$sample->rights_confirmed_at->format('j M Y').($by ? ' by '.$by : '');
         }
 

@@ -6,18 +6,20 @@ use App\Domain\Ai\Writing\SentenceSplitter;
 use App\Domain\Documents\DocumentModel;
 
 /**
- * Finds sentences of a draft that repeat a writing sample's wording: any run
- * of WINDOW consecutive words that also occurs in a sample. Samples are style
- * references only, so such a sentence is either plagiarism or another
- * person's facts. The order's own institution and programme names are
- * ignored, since a sample for the same programme may legitimately name them.
+ * Finds paragraph sentences of a draft that repeat a writing sample's
+ * wording: any run of WINDOW consecutive words that also occurs in a sample.
+ * Samples are style references only, so such a sentence is either plagiarism
+ * or another person's facts. Words of the order's own institution and
+ * programme names break a run, since a sample for the same programme may
+ * legitimately name them. Only paragraphs are checked: they are what the
+ * factual review can rewrite or remove.
  */
 final class WritingSampleOverlap
 {
     public const COPIED_FROM_SAMPLE = 'copied_from_sample';
 
-    /** Consecutive shared words that count as copying. */
-    public const WINDOW = 10;
+    /** Consecutive shared words that count as copying (long enough to skip stock phrases). */
+    public const WINDOW = 12;
 
     /** Name words shorter than this are kept ("of", "and", "in"). */
     private const MIN_IGNORED_WORD = 4;
@@ -40,7 +42,7 @@ final class WritingSampleOverlap
 
         $known = [];
         foreach ($sampleTexts as $text) {
-            foreach ($this->shingles($this->words($text, $ignored)) as $shingle) {
+            foreach ($this->shingles($text, $ignored) as $shingle) {
                 $known[$shingle] = true;
             }
         }
@@ -51,8 +53,12 @@ final class WritingSampleOverlap
 
         $findings = [];
         foreach ($draft->blocks as $block) {
+            if ($block['type'] !== 'paragraph') {
+                continue;
+            }
+
             foreach (SentenceSplitter::split($block['text']) as $sentence) {
-                foreach ($this->shingles($this->words($sentence, $ignored)) as $shingle) {
+                foreach ($this->shingles($sentence, $ignored) as $shingle) {
                     if (isset($known[$shingle])) {
                         $findings[] = [
                             'type' => self::COPIED_FROM_SAMPLE,
@@ -71,26 +77,26 @@ final class WritingSampleOverlap
     }
 
     /**
+     * Every run of WINDOW consecutive words; an ignored word ends a run.
+     *
      * @param  array<string, true>  $ignored
      * @return list<string>
      */
-    private function words(string $text, array $ignored): array
-    {
-        return array_values(array_filter(
-            SentenceSplitter::words(str_replace(['’', '‘'], "'", $text)),
-            fn (string $word) => ! isset($ignored[$word]),
-        ));
-    }
-
-    /**
-     * @param  list<string>  $words
-     * @return list<string>
-     */
-    private function shingles(array $words): array
+    private function shingles(string $text, array $ignored): array
     {
         $shingles = [];
-        for ($i = 0, $last = count($words) - self::WINDOW; $i <= $last; $i++) {
-            $shingles[] = implode(' ', array_slice($words, $i, self::WINDOW));
+        $run = [];
+        foreach ([...SentenceSplitter::words(str_replace(['’', '‘'], "'", $text)), null] as $word) {
+            if ($word !== null && ! isset($ignored[$word])) {
+                $run[] = $word;
+
+                continue;
+            }
+
+            for ($i = 0, $last = count($run) - self::WINDOW; $i <= $last; $i++) {
+                $shingles[] = implode(' ', array_slice($run, $i, self::WINDOW));
+            }
+            $run = [];
         }
 
         return $shingles;

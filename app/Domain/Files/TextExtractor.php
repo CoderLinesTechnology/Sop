@@ -69,12 +69,19 @@ final class TextExtractor
      */
     public function textFromContents(string $contents, string $extension): string
     {
-        $text = match ($extension) {
-            'pdf' => $this->pdfTextFromContents($contents),
-            'docx' => $this->fromDocx($contents),
-            'txt' => $contents,
-            default => '',
-        };
+        try {
+            $text = match ($extension) {
+                'pdf' => $this->pdfTextFromContents($contents),
+                'docx' => $this->fromDocx($contents),
+                'txt' => $contents,
+                default => '',
+            };
+        } catch (Throwable $e) {
+            // Encrypted or damaged files: report "no text" rather than failing.
+            Log::warning('Text extraction failed', ['extension' => $extension, 'error' => $e->getMessage()]);
+
+            return '';
+        }
 
         return $this->normalize($text);
     }

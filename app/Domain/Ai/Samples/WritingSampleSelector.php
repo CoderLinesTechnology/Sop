@@ -140,7 +140,7 @@ class WritingSampleSelector
 
         $field = mb_strtolower(trim((string) $sample->field_of_study));
         if ($field !== '' && $programme !== '') {
-            if (str_contains($programme, $field) || str_contains($field, $programme)) {
+            if (self::containsPhrase($programme, $field) || self::containsPhrase($field, $programme)) {
                 $score += 4;
             } elseif (array_intersect($this->fieldWords($field), $this->fieldWords($programme)) !== []) {
                 $score += 2;
@@ -156,6 +156,12 @@ class WritingSampleSelector
         }
 
         return $score;
+    }
+
+    /** Whole-word match: "IT" must not match "digital", nor "Law" match "Lawrence". */
+    private static function containsPhrase(string $haystack, string $phrase): bool
+    {
+        return preg_match('/(?<![\p{L}\p{N}])'.preg_quote($phrase, '/').'(?![\p{L}\p{N}])/u', $haystack) === 1;
     }
 
     /** @return list<string> */

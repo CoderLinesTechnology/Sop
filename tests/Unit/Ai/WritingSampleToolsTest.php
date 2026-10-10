@@ -26,6 +26,13 @@ it('redacts email addresses, phone numbers and links but keeps dates and figures
     ]))->and($counts)->toBe(['emails' => 1, 'links' => 3, 'phones' => 4]);
 });
 
+it('keeps phone matches on one line and leaves course and technology names alone', function () {
+    [$text, $counts] = WritingSampleImporter::redact("+233 24 555 0199\n2019 - 2021 Intern\n0244 123 456\n2019 Intern\nB.Sc/M.Sc, Node.js/React and ASP.NET/C# at kwame.dev/blog.");
+
+    expect($text)->toBe("[phone]\n2019 - 2021 Intern\n[phone]\n2019 Intern\nB.Sc/M.Sc, Node.js/React and ASP.NET/C# at [link].")
+        ->and($counts)->toBe(['links' => 1, 'phones' => 2]);
+});
+
 it('refuses text too short to be a useful sample', function () {
     app(WritingSampleImporter::class)->fromText('A single line is not a sample.');
 })->throws(UploadRejected::class, 'too short');
@@ -47,20 +54,26 @@ it('reads text from DOCX and TXT contents', function () {
 
     expect($extractor->textFromContents($docx, 'docx'))->toBe("First paragraph.\nSecond paragraph.")
         ->and($extractor->textFromContents("Plain\t text\n\n\n\nhere", 'txt'))->toBe("Plain text\n\nhere")
-        ->and($extractor->textFromContents('anything', 'png'))->toBe('');
+        ->and($extractor->textFromContents('anything', 'png'))->toBe('')
+        ->and($extractor->textFromContents("%PDF-1.7\nnot really a pdf body\n%%EOF\n", 'pdf'))->toBe('');
 });
 
-it('flags a sentence that shares ten consecutive words with a sample', function () {
+it('flags a sentence that shares twelve consecutive words with a sample', function () {
     $sample = 'In my second year I rebuilt the clinic’s paper records into a searchable database that nurses still use every day.';
     $overlap = new WritingSampleOverlap;
 
     $copied = $overlap->find(sampleDraft("I rebuilt the clinic's paper records into a searchable database that nurses still use. Then I left."), [$sample]);
-    $nineWords = $overlap->find(sampleDraft('Later I rebuilt the clinic paper records into a searchable database for the farm.'), [$sample]);
+    $shorterRun = $overlap->find(sampleDraft('Later I rebuilt the clinic paper records into a searchable database for the farm.'), [$sample]);
+    $heading = new DocumentModel('Letter', null, null, [
+        ['type' => 'salutation', 'text' => "In my second year I rebuilt the clinic's paper records into a searchable database that nurses still use."],
+    ]);
 
     expect($copied)->toHaveCount(1)
         ->and($copied[0]['type'])->toBe(WritingSampleOverlap::COPIED_FROM_SAMPLE)
         ->and($copied[0]['excerpt'])->toBe("I rebuilt the clinic's paper records into a searchable database that nurses still use.")
-        ->and($nineWords)->toBe([])
+        ->and($shorterRun)->toBe([])
+        // Only paragraphs are checked: they are what the factual review can rewrite or remove.
+        ->and($overlap->find($heading, [$sample]))->toBe([])
         ->and($overlap->find(sampleDraft('Anything at all.'), []))->toBe([]);
 });
 

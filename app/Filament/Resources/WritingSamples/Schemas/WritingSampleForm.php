@@ -98,10 +98,7 @@ class WritingSampleForm
                         ->maxLength(WritingSampleImporter::MAX_CHARS)
                         ->visible(fn (Get $get): bool => $get('source') === WritingSample::SOURCE_PASTED)
                         ->required(fn (Get $get): bool => $get('source') === WritingSample::SOURCE_PASTED),
-                    Checkbox::make('rights_confirmed')
-                        ->label("This document is anonymised, or its author has agreed to it being used as a writing sample. It does not belong to a customer who hasn't agreed.")
-                        ->accepted()
-                        ->validationMessages(['accepted' => 'Confirm that the document may be used as a writing sample.']),
+                    self::rightsConfirmation('rights_confirmed'),
                 ]),
 
             Section::make('Text the AI studies')
@@ -123,8 +120,20 @@ class WritingSampleForm
                         ->acceptedFileTypes(WritingSampleData::ACCEPTED_TYPES)
                         ->rule('extensions:pdf,docx,txt')
                         ->maxSize(WritingSampleData::MAX_UPLOAD_KB)
-                        ->storeFiles(false),
+                        ->storeFiles(false)
+                        ->live(),
+                    self::rightsConfirmation('replacement_rights_confirmed')
+                        ->visible(fn (Get $get): bool => filled($get('replacement_file'))),
                 ]),
         ]);
+    }
+
+    /** Confirmation required for every document added as a sample (validated only while visible). */
+    private static function rightsConfirmation(string $name): Checkbox
+    {
+        return Checkbox::make($name)
+            ->label("This document is anonymised, or its author has agreed to it being used as a writing sample. It does not belong to a customer who hasn't agreed.")
+            ->accepted()
+            ->validationMessages(['accepted' => 'Confirm that the document may be used as a writing sample.']);
     }
 }

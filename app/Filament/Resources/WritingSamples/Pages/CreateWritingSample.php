@@ -9,6 +9,7 @@ use App\Filament\Support\Operations\AdminContext;
 use App\Models\WritingSample;
 use App\Support\Audit;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Validation\ValidationException;
 
 class CreateWritingSample extends CreateRecord
 {
@@ -19,11 +20,20 @@ class CreateWritingSample extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $upload = ($data['source'] ?? null) === WritingSample::SOURCE_PASTED ? null : ($data['file'] ?? null);
-        $imported = WritingSampleData::import($upload, $data['pasted_text'] ?? null, 'file', 'pasted_text');
+
+        try {
+            $imported = WritingSampleData::import($upload, $data['pasted_text'] ?? null, 'file', 'pasted_text');
+        } catch (ValidationException $e) {
+            $this->data['file'] = []; // the refused upload has been deleted
+            throw $e;
+        }
+
+        $adminId = AdminContext::require()->id;
 
         return WritingSampleData::fields($data) + $imported + [
             'rights_confirmed_at' => now(),
-            'created_by_admin_id' => AdminContext::require()->id,
+            'rights_confirmed_by_admin_id' => $adminId,
+            'created_by_admin_id' => $adminId,
         ];
     }
 

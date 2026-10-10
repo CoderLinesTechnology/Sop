@@ -14,6 +14,7 @@ use Filament\Facades\Filament;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -88,9 +89,12 @@ it('imports a DOCX upload as redacted, encrypted text and discards the file', fu
     $admin = actingAsAdmin(AdminRole::Ai);
     $filesBefore = count(Storage::disk('private')->allFiles());
 
-    Livewire::test(CreateWritingSample::class)
-        ->fillForm(sampleForm(['source' => 'upload', 'file' => UploadedFile::fake()->createWithContent('Kwame Mensah SOP.docx', sampleDocx(sampleText()))]))
-        ->call('create')
+    $page = Livewire::test(CreateWritingSample::class)
+        ->fillForm(sampleForm(['source' => 'upload', 'file' => UploadedFile::fake()->createWithContent('Kwame Mensah SOP.docx', sampleDocx(sampleText()))]));
+    $temporary = Storage::disk(FileUploadConfiguration::disk());
+    $temporaryBefore = count($temporary->allFiles());
+
+    $page->call('create')
         ->assertHasNoFormErrors()
         ->assertRedirect(WritingSampleResource::getUrl('edit', ['record' => WritingSample::query()->sole()]));
 
@@ -104,12 +108,14 @@ it('imports a DOCX upload as redacted, encrypted text and discards the file', fu
         ->and($sample->redactions)->toEqual(['emails' => 1, 'links' => 2, 'phones' => 1])
         ->and($sample->word_count)->toBeGreaterThan(150)
         ->and($sample->rights_confirmed_at)->not->toBeNull()
+        ->and($sample->rights_confirmed_by_admin_id)->toBe($admin->id)
         ->and($sample->created_by_admin_id)->toBe($admin->id);
 
-    // Encrypted at rest; the uploaded file itself is not kept anywhere.
+    // Encrypted at rest; the uploaded file itself is not kept anywhere (not even Livewire's temporary copy).
     $raw = (string) DB::table('writing_samples')->where('id', $sample->id)->value('content');
     expect($raw)->not->toContain('cholera')
-        ->and(count(Storage::disk('private')->allFiles()))->toBe($filesBefore);
+        ->and(count(Storage::disk('private')->allFiles()))->toBe($filesBefore)
+        ->and(count($temporary->allFiles()))->toBe($temporaryBefore - 1);
 
     $audit = AuditLog::query()->where('action', 'writing_sample.created')->sole();
     expect($audit->after)->toMatchArray(['title' => 'Public health SOP (2024 intake)', 'document_kind' => 'statement_of_purpose', 'source' => 'upload'])
@@ -143,11 +149,24 @@ it('refuses a sample without permission confirmation, a disguised file or too li
         ->call('create')
         ->assertHasFormErrors(['file']);
 
+    $page = Livewire::test(CreateWritingSample::class)
+        ->fillForm(sampleForm(['source' => 'upload', 'file' => UploadedFile::fake()->createWithContent('sop.pdf', "%PDF-1.4\n1 0 obj <<>> endobj\n")]));
+    $temporary = Storage::disk(FileUploadConfiguration::disk());
+    $temporaryBefore = count($temporary->allFiles());
+
+    // A refused upload is deleted too, and the field is cleared so a file is chosen again.
+    $page->call('create')
+        ->assertHasFormErrors(['file'])
+        ->assertSee('This PDF appears to be damaged or incomplete.')
+        ->assertSet('data.file', []);
+    expect(count($temporary->allFiles()))->toBe($temporaryBefore - 1);
+
+    // An encrypted or unreadable PDF is a form error, not a crash.
     Livewire::test(CreateWritingSample::class)
-        ->fillForm(sampleForm(['source' => 'upload', 'file' => UploadedFile::fake()->createWithContent('sop.pdf', "%PDF-1.4\n1 0 obj <<>> endobj\n")]))
+        ->fillForm(sampleForm(['source' => 'upload', 'file' => UploadedFile::fake()->createWithContent('sop.pdf', "%PDF-1.7\nnot really a pdf body\n%%EOF\n")]))
         ->call('create')
         ->assertHasFormErrors(['file'])
-        ->assertSee('This PDF appears to be damaged or incomplete.');
+        ->assertSee('No text could be read from this file');
 
     Livewire::test(CreateWritingSample::class)
         ->fillForm(sampleForm(['source' => 'pasted', 'pasted_text' => 'Too short to teach anything.']))
@@ -183,6 +202,33 @@ it('saves edited text with redactions applied again and audits the change withou
     expect($audit->meta)->toBe(['text_changed' => true])
         ->and($audit->after)->toMatchArray(['is_active' => false, 'priority' => 5])
         ->and(json_encode([$audit->before, $audit->after]))->not->toContain('northern');
+});
+
+it('asks for the permission again when the file is replaced', function () {
+    $admin = actingAsAdmin(AdminRole::Ai);
+    $sample = WritingSample::query()->create([
+        'title' => 'Engineering SOP', 'document_kind' => 'statement_of_purpose', 'content' => sampleText(),
+        'word_count' => 180, 'source' => 'pasted', 'rights_confirmed_at' => now()->subMonth(), 'rights_confirmed_by_admin_id' => null,
+    ]);
+    $replacement = str_replace('cholera map', 'malaria dashboard', sampleText());
+
+    Livewire::test(EditWritingSample::class, ['record' => $sample->getRouteKey()])
+        ->fillForm(['replacement_file' => UploadedFile::fake()->createWithContent('new.txt', $replacement)])
+        ->call('save')
+        ->assertHasFormErrors(['replacement_rights_confirmed']);
+    expect($sample->fresh()->content)->toContain('cholera map');
+
+    Livewire::test(EditWritingSample::class, ['record' => $sample->getRouteKey()])
+        ->fillForm(['replacement_file' => UploadedFile::fake()->createWithContent('new.txt', $replacement), 'replacement_rights_confirmed' => true])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $sample->refresh();
+    expect($sample->content)->toContain('malaria dashboard')->not->toContain('cholera map')
+        ->and($sample->source)->toBe('upload')
+        ->and($sample->rights_confirmed_by_admin_id)->toBe($admin->id)
+        ->and($sample->rights_confirmed_at->isToday())->toBeTrue()
+        ->and(AuditLog::query()->where('action', 'writing_sample.updated')->sole()->meta)->toEqual(['text_changed' => true, 'file_replaced' => true]);
 });
 
 it('deletes a sample from the list and audits it', function () {

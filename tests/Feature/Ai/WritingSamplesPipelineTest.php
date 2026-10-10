@@ -125,6 +125,14 @@ it('prefers the closest field, level and country, then priority', function () {
         ->and($selector->choose($order, DocumentKind::Resume, 3))->toBe([]);
 });
 
+it('matches fields of study on whole words only', function () {
+    $order = $this->paidOrder(['programme' => 'MSc Digital Health']);
+    writingSample(['field_of_study' => 'IT', 'priority' => 10]); // "IT" is not "digital"
+    $health = writingSample(['field_of_study' => 'Global Health']);
+
+    expect(app(WritingSampleSelector::class)->choose($order, DocumentKind::PersonalStatement, 1))->toBe([$health->id]);
+});
+
 it('takes turns between equally good samples across orders', function () {
     $a = writingSample();
     $b = writingSample();

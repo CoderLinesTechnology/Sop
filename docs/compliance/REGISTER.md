@@ -27,11 +27,13 @@ sent to OpenAI as style references while other customers' documents are written.
 - **Risk:** a sample may contain the personal data of its author (or of a past customer).
   Sending it to the AI for someone else's order is a new purpose; a past customer's
   document would also outlive the order retention period.
-- **Engineering controls:** an administrator must confirm, per sample, that it is
-  anonymised or that the author agreed (`writing_samples.rights_confirmed_at`, who
-  confirmed in `created_by_admin_id` and the audit log); email addresses, phone numbers
-  and links are redacted on import and on every edit (`WritingSampleImporter::redact()`);
-  the uploaded file is discarded and only the text is kept, encrypted at rest; titles are
+- **Engineering controls:** an administrator must confirm that each document is
+  anonymised or that its author agreed — when it is added and again whenever its file is
+  replaced (`writing_samples.rights_confirmed_at` / `rights_confirmed_by_admin_id`, plus the
+  audit log); email addresses, phone numbers and links are redacted on import and on every
+  edit (`WritingSampleImporter::redact()`), while names are not detected automatically, so
+  the edit page asks the administrator to remove them; the uploaded file (including the
+  temporary upload copy) is discarded and only the text is kept, encrypted at rest; titles are
   never sent to the AI; samples reach the model as untrusted data; wording copied from a
   sample is removed before delivery (`WritingSampleOverlap` in `FactCheckStage`);
   deleting a sample erases it (no copies are stored per order, only ids in
