@@ -5,9 +5,11 @@ namespace App\Domain\Ai\Llm;
 use App\Domain\Ai\Pipeline\StageContext;
 use App\Domain\Ai\Prompts\PromptRenderer;
 use App\Domain\Ai\Prompts\PromptRepository;
+use App\Domain\Ai\Prompts\PromptValue;
 use App\Domain\Ai\Prompts\ResolvedPrompt;
 use App\Domain\Ai\Prompts\Schemas;
 use App\Domain\Ai\Prompts\UntrustedData;
+use App\Domain\Ai\Prompts\WritingSampleNote;
 use App\Domain\Ai\Research\UrlNormalizer;
 use App\Support\SecurityLog;
 use Illuminate\Support\Facades\Cache;
@@ -53,13 +55,15 @@ class LlmGateway
         $model = $this->model($ctx, $call, $prompt);
         $boundary = UntrustedData::boundary();
 
+        [$template, $variables, $instructions] = $this->withWritingSamples($call, $prompt->userTemplate, trim($prompt->systemPrompt));
+
         $renderer = new PromptRenderer;
-        $userText = $renderer->render($prompt->userTemplate, $call->variables, $boundary);
+        $userText = $renderer->render($template, $variables, $boundary);
         $this->reportRendering($ctx, $promptKey, $renderer);
 
         $request = new LlmRequest(
             model: $model,
-            instructions: trim($prompt->systemPrompt)."\n\n".UntrustedData::securityNote($boundary),
+            instructions: $instructions."\n\n".UntrustedData::securityNote($boundary),
             input: [['role' => 'user', 'content' => $this->content($userText, $call->attachments, $boundary)]],
             schema: $schema,
             reasoningEffort: $call->reasoningEffort ?? $ctx->stageConfig('reasoning_effort') ?? $prompt->version?->reasoning_effort,
@@ -183,6 +187,31 @@ class LlmGateway
         return "REPAIR REQUIRED: your previous response did not satisfy the required JSON schema \"{$schemaName}\". Problems: {$errors}\n\n"
             ."Previous response (for reference only, possibly truncated):\n{$excerpt}\n\n"
             .'Respond again with one complete JSON object that strictly matches the schema: include every required property, use null where a value is unknown, use only the allowed enum values, and add no extra properties, markdown or commentary. Do not change the substance of your answer beyond fixing these problems.';
+    }
+
+    /**
+     * Writing samples travel as an untrusted {{writing_samples}} block: where
+     * the prompt version places it, or appended to the user template. The
+     * rules for using them are added to the (trusted) instructions.
+     *
+     * @return array{0:string, 1:array<string, mixed>, 2:string} template, variables, instructions
+     */
+    private function withWritingSamples(LlmCall $call, string $template, string $instructions): array
+    {
+        $variables = $call->variables;
+
+        if ($call->writingSamples === []) {
+            $variables[WritingSampleNote::VARIABLE] ??= null;
+
+            return [$template, $variables, $instructions];
+        }
+
+        $variables[WritingSampleNote::VARIABLE] = PromptValue::untrusted($call->writingSamples, WritingSampleNote::VARIABLE);
+        if (! in_array(WritingSampleNote::VARIABLE, PromptRenderer::placeholders($template), true)) {
+            $template = rtrim($template)."\n\n".WritingSampleNote::USER_SECTION;
+        }
+
+        return [$template, $variables, $instructions."\n\n".WritingSampleNote::INSTRUCTIONS];
     }
 
     /** The workflow's prompt key for this task in this stage (defaults to the task name). */

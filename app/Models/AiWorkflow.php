@@ -93,6 +93,10 @@ class AiWorkflow extends Model
                 'enabled' => true,
                 'max_questions' => 3,
             ],
+            'writing_samples' => [
+                'enabled' => true,
+                'max_samples' => 2,
+            ],
             'on_budget_exceeded' => 'fallback',
         ];
     }

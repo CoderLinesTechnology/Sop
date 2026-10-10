@@ -2,6 +2,7 @@
 
 namespace App\Filament\Support\Catalogue;
 
+use App\Domain\Ai\Samples\WritingSampleSelector;
 use App\Enums\PipelineStage;
 use App\Models\AiWorkflow;
 use Filament\Forms\Components\Select;
@@ -58,6 +59,14 @@ final class WorkflowConfigForm
                                 ->helperText('How many times a document below the threshold is sent back for refinement.'),
                         ])
                         ->columns(3),
+                    Section::make('Writing samples')
+                        ->description('Example documents from AI → Writing samples that the planning, writing and editing stages study for structure, tone and specificity. Wording copied from a sample is removed by the factual review.')
+                        ->schema([
+                            Toggle::make('config.writing_samples.enabled')->label('Show writing samples to the writer'),
+                            TextInput::make('config.writing_samples.max_samples')->label('Samples per order')->integer()->minValue(1)->maxValue(WritingSampleSelector::MAX_SAMPLES)->required()
+                                ->helperText('Each sample adds roughly 2,000 input tokens to every writing-stage call.'),
+                        ])
+                        ->columns(2),
                 ]),
             Tab::make('Limits & retries')
                 ->icon(Heroicon::OutlinedShieldExclamation)

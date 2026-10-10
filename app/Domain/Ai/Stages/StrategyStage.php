@@ -26,6 +26,7 @@ class StrategyStage implements Stage
             task: 'strategy',
             variables: $variables,
             context: PromptInputs::fakeContext($ctx),
+            writingSamples: PromptInputs::writingSamples($ctx),
         ));
 
         [$strategy, $dropped] = $this->sanitize($result->data, $ctx->factIds(), $ctx->safeClaimKeys(), $ctx->targetWords());

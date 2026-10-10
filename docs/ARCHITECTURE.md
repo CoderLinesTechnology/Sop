@@ -36,7 +36,7 @@ Page views / status polling / uptime ping ──► Heartbeat: retries, reconcil
 | `app/Domain/Files` | `UploadService`, `UploadValidator`, `MalwareScanner` (ClamAV), `FileEncryptor` (AES-256-GCM), `FileVault`, `TextExtractor` |
 | `app/Domain/Email` | `TransactionalMailer`, `TemplateRenderer`, `DefaultEmailTemplates`, `OrderEmailVariables` |
 | `app/Domain/Delivery` | `DocumentDelivery` (attach PDF+DOCX, mark DELIVERED / DELIVERY_FAILED) |
-| `app/Domain/Ai` | AI pipeline: `PipelineDispatcher`, stages, OpenAI client, fake provider, budgets |
+| `app/Domain/Ai` | AI pipeline: `PipelineDispatcher`, stages, OpenAI client, fake provider, budgets; `Samples/`: admin-uploaded writing samples (import, per-job selection, copy detection) |
 | `app/Domain/Documents` | Requirements & templates, `DocumentModel`, PDF/DOCX renderers, file QA |
 | `app/Domain/Notifications` | `AdminNotifier` (Filament database notifications + email + webhook) |
 | `app/Support` | `Settings` (admin settings, cached), `Money`, `Audit`, `SecurityLog`, `Analytics`, `SafeHttp` |
@@ -77,6 +77,7 @@ Page views / status polling / uptime ping ──► Heartbeat: retries, reconcil
 - AI → Orders: `InformationRequestService::request(Order, questions)`; customers' answers call `PipelineDispatcher::resume()`.
 - AI → Documents: `RequirementResolver::resolve()`, `TemplateResolver::resolve()`, `DocumentFactory::createVersion()`, `DocumentRenderer::render()`, `DocumentQa::validate()`.
 - AI → Delivery: `DocumentDelivery::deliver(Order, DocumentVersion, ?Revision)`.
+- Writing samples → AI: `WritingSampleSelector::forJob()` picks a job's samples once (stored in `ai_jobs.writing_sample_ids`); strategy, writing, editorial, refinement and revision calls receive them as untrusted data, and `FactCheckStage` removes wording copied from them (`WritingSampleOverlap`). Compliance notes: `docs/compliance/REGISTER.md`.
 - Revisions: `RevisionService::request()` / `begin()` → `PipelineDispatcher::startRevision()`.
 - Admin overrides: `PipelineDispatcher` (pause/resume/retry/skip/cancel/regenerate), `DocumentAdminOperations`, `DocumentDelivery::resend()`, `RefundService`, `InformationRequestService`, `OrderStateMachine` (force with reason), `OrderAccess::rotate()`.
 

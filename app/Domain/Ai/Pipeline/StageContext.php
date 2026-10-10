@@ -3,6 +3,7 @@
 namespace App\Domain\Ai\Pipeline;
 
 use App\Domain\Ai\Prompts\LanguageGuide;
+use App\Domain\Ai\Samples\WritingSampleSelector;
 use App\Domain\Ai\Writing\EvidenceCorpus;
 use App\Domain\Ai\Writing\LengthChecker;
 use App\Domain\Documents\DocumentModel;
@@ -23,6 +24,7 @@ use App\Models\OrderRequirement;
 use App\Models\ResearchClaim;
 use App\Models\Revision;
 use App\Models\UploadedFile;
+use App\Models\WritingSample;
 use App\Support\Settings;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -145,6 +147,16 @@ final class StageContext
         $guidance = trim((string) ($this->order->service?->writing_guidance ?? ''));
 
         return $guidance !== '' ? $guidance : 'None.';
+    }
+
+    /**
+     * The writing samples chosen for this job (see WritingSampleSelector).
+     *
+     * @return Collection<int, WritingSample>
+     */
+    public function writingSamples(): Collection
+    {
+        return $this->memo['writing_samples'] ??= app(WritingSampleSelector::class)->forJob($this->job, $this->order, $this->documentKind());
     }
 
     /** @return list<string> */

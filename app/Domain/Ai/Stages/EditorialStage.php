@@ -41,6 +41,7 @@ class EditorialStage implements Stage
             task: 'editorial',
             variables: $variables,
             context: PromptInputs::fakeContext($ctx, $draft, ['findings' => $before, 'used_claim_ids' => $ctx->currentDraftClaimIds()]),
+            writingSamples: PromptInputs::writingSamples($ctx),
         ));
 
         $edited = DraftConverter::toModel($result->data, $draft->title, $ctx->languageVariant(), $ctx->applicantName());

@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
  */
 #[Fillable([
     'uuid', 'order_id', 'revision_id', 'kind', 'dedupe_key', 'status', 'current_stage', 'ai_workflow_id',
-    'workflow_snapshot', 'prompt_versions', 'provider', 'started_at', 'heartbeat_at', 'finished_at',
+    'workflow_snapshot', 'prompt_versions', 'writing_sample_ids', 'provider', 'started_at', 'heartbeat_at', 'finished_at',
     'total_input_tokens', 'total_cached_tokens', 'total_output_tokens', 'total_reasoning_tokens', 'llm_calls',
     'search_calls', 'refinement_rounds', 'total_cost_usd', 'failure_count', 'last_error_code',
     'last_error_message', 'used_fallback',
@@ -50,6 +50,7 @@ class AiJob extends Model
             'current_stage' => PipelineStage::class,
             'workflow_snapshot' => 'array',
             'prompt_versions' => 'array',
+            'writing_sample_ids' => 'array',
             'started_at' => 'datetime',
             'heartbeat_at' => 'datetime',
             'finished_at' => 'datetime',

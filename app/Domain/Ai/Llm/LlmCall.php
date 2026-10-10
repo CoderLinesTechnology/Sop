@@ -20,6 +20,7 @@ final class LlmCall
      * @param  list<array{label:string, part:array<string,mixed>}>  $attachments  input_image / input_file parts
      * @param  array{allowed_domains?:list<string>, search_context_size?:string, country?:?string, max_tool_calls?:int}|null  $webSearch
      * @param  array<string, mixed>  $context  structured inputs for the fake provider (never sent to a real API)
+     * @param  list<array<string, string>>  $writingSamples  style references (WritingSampleSelector::forPrompt), sent as untrusted data
      */
     public function __construct(
         public readonly string $task,
@@ -32,5 +33,6 @@ final class LlmCall
         public readonly ?int $maxOutputTokens = null,
         public readonly array $context = [],
         public readonly string $label = '',
+        public readonly array $writingSamples = [],
     ) {}
 }

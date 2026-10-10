@@ -44,6 +44,7 @@ class WritingStage implements Stage
             task: 'writing',
             variables: $variables,
             context: PromptInputs::fakeContext($ctx, extra: ['strategy' => $variables['strategy']]),
+            writingSamples: PromptInputs::writingSamples($ctx),
         ));
 
         return StageResult::completed($this->output($ctx, $result, 'initial'));
@@ -61,6 +62,7 @@ class WritingStage implements Stage
             task: 'refinement',
             variables: $variables,
             context: PromptInputs::fakeContext($ctx, $draft, ['review' => $variables['review'], 'used_claim_ids' => $ctx->currentDraftClaimIds()]),
+            writingSamples: PromptInputs::writingSamples($ctx),
         ));
 
         // A refined draft is fact-checked and reviewed again (editorial is not repeated).
@@ -80,6 +82,7 @@ class WritingStage implements Stage
             task: 'revision',
             variables: $variables,
             context: PromptInputs::fakeContext($ctx, $delivered, ['request' => (string) $revision->request_text]),
+            writingSamples: PromptInputs::writingSamples($ctx),
         ));
 
         return StageResult::completed($this->output($ctx, $result, 'revision') + ['revision_number' => $revision->number]);

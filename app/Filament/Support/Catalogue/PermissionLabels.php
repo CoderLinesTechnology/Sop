@@ -32,7 +32,7 @@ final class PermissionLabels
         Permission::NewsletterManage => 'Manage newsletter subscribers',
         Permission::SupportManage => 'Handle support messages',
         Permission::FeedbackView => 'View customer feedback',
-        Permission::AiManage => 'Configure AI workflows, prompts and model prices; AI control centre',
+        Permission::AiManage => 'Configure AI workflows, prompts, model prices and writing samples; AI control centre',
         Permission::PromptsActivate => 'Activate prompt versions (put prompts into production)',
         Permission::RequirementsManage => 'Manage requirement rules',
         Permission::TemplatesManage => 'Manage document templates',

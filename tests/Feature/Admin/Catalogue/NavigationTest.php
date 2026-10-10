@@ -18,6 +18,7 @@ use App\Filament\Resources\RequirementRules\RequirementRuleResource;
 use App\Filament\Resources\Roles\RoleResource;
 use App\Filament\Resources\Services\ServiceResource;
 use App\Filament\Resources\Testimonials\TestimonialResource;
+use App\Filament\Resources\WritingSamples\WritingSampleResource;
 use Filament\Facades\Filament;
 
 beforeEach(function () {
@@ -26,11 +27,11 @@ beforeEach(function () {
 
 /** Which of this area's screens each built-in role can open. */
 dataset('access', [
-    'super admin' => [AdminRole::SuperAdmin, ['services', 'pages', 'articles', 'categories', 'faqs', 'testimonials', 'emails', 'workflows', 'prompts', 'prices', 'rules', 'templates', 'control', 'settings', 'admins', 'roles', 'audit']],
+    'super admin' => [AdminRole::SuperAdmin, ['services', 'pages', 'articles', 'categories', 'faqs', 'testimonials', 'emails', 'workflows', 'prompts', 'samples', 'prices', 'rules', 'templates', 'control', 'settings', 'admins', 'roles', 'audit']],
     'content admin' => [AdminRole::Content, ['services', 'pages', 'articles', 'categories', 'faqs', 'testimonials', 'emails']],
     'finance admin' => [AdminRole::Finance, ['services']],
     'operations admin' => [AdminRole::Operations, []],
-    'AI admin' => [AdminRole::Ai, ['workflows', 'prompts', 'prices', 'rules', 'templates', 'control']],
+    'AI admin' => [AdminRole::Ai, ['workflows', 'prompts', 'samples', 'prices', 'rules', 'templates', 'control']],
 ]);
 
 it('gives each role exactly the screens it needs', function (AdminRole $role, array $allowed) {
@@ -46,6 +47,7 @@ it('gives each role exactly the screens it needs', function (AdminRole $role, ar
         'emails' => EmailTemplateResource::class,
         'workflows' => AiWorkflowResource::class,
         'prompts' => PromptVersionResource::class,
+        'samples' => WritingSampleResource::class,
         'prices' => AiModelPriceResource::class,
         'rules' => RequirementRuleResource::class,
         'templates' => DocumentTemplateResource::class,

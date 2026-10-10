@@ -7,6 +7,7 @@ use App\Domain\Ai\Llm\LlmGateway;
 use App\Domain\Ai\Pipeline\StageContext;
 use App\Domain\Ai\Pipeline\StageFailure;
 use App\Domain\Ai\Pipeline\StageResult;
+use App\Domain\Ai\Samples\WritingSampleOverlap;
 use App\Domain\Ai\Writing\DraftConverter;
 use App\Domain\Ai\Writing\FactChecker;
 use App\Domain\Ai\Writing\SentenceSplitter;
@@ -14,9 +15,10 @@ use App\Domain\Documents\DocumentModel;
 use App\Models\ResearchClaim;
 
 /**
- * Factual review: deterministic checks (numbers, names, URLs, placeholders)
- * plus a model review of every statement against the profile, the order and
- * the verified dossier. Problems are fixed by an LLM correction pass (up to
+ * Factual review: deterministic checks (numbers, names, URLs, placeholders,
+ * wording copied from a writing sample) plus a model review of every
+ * statement against the profile, the order and the verified dossier.
+ * Problems are fixed by an LLM correction pass (up to
  * stages.fact_check.max_fix_passes, default 2); anything mechanical that
  * survives is removed sentence by sentence; a wrong institution or programme
  * name that survives sends the order to manual review. Claims the final text
@@ -30,11 +32,13 @@ class FactCheckStage implements Stage
         FactChecker::PLACEHOLDER => 'other',
         FactChecker::UNKNOWN_INSTITUTION => 'wrong_institution_or_programme',
         FactChecker::UNKNOWN_PROGRAMME => 'wrong_institution_or_programme',
+        WritingSampleOverlap::COPIED_FROM_SAMPLE => 'other',
     ];
 
     public function __construct(
         private readonly LlmGateway $llm,
         private readonly FactChecker $checker,
+        private readonly WritingSampleOverlap $overlap,
     ) {}
 
     public function run(StageContext $ctx): StageResult
@@ -47,12 +51,14 @@ class FactCheckStage implements Stage
         $dossierKeys = $this->dossierKeys($ctx);
         $safeKeys = array_flip($ctx->safeClaimKeys());
         $usedClaims = $ctx->currentDraftClaimIds();
+        $sampleTexts = $ctx->writingSamples()->map(fn ($sample) => (string) $sample->content)->all();
+        $copied = fn (DocumentModel $draft): array => $this->overlap->find($draft, $sampleTexts, array_values($names));
 
         $history = [];
         $blocking = [];
 
         for ($pass = 0; ; $pass++) {
-            $findings = $this->checker->check($draft, $evidence, $names, $citationsAllowed);
+            $findings = [...$this->checker->check($draft, $evidence, $names, $citationsAllowed), ...$copied($draft)];
 
             $variables = PromptInputs::common($ctx);
             $variables['draft'] = DraftConverter::forPrompt($draft);
@@ -105,6 +111,10 @@ class FactCheckStage implements Stage
             $removed += max(0, $before - count(SentenceSplitter::split($draft->bodyText())));
             $remaining = $this->checker->check($draft, $evidence, $names, $citationsAllowed);
         }
+        if (($stillCopied = $copied($draft)) !== []) {
+            [$draft, $dropped] = $this->removeFlaggedSentences($draft, $stillCopied);
+            $removed += $dropped;
+        }
 
         $usedSafe = array_values(array_filter($usedClaims, fn ($key) => isset($safeKeys[$key])));
         $this->markUsedClaims($ctx, $usedSafe);
@@ -136,7 +146,7 @@ class FactCheckStage implements Stage
             'problem' => $f['problem'],
             'type' => self::ISSUE_TYPE_MAP[$f['type']] ?? 'other',
             'severity' => 'high',
-            'fix' => 'Remove the detail or replace it with what the material supports.',
+            'fix' => $f['fix'] ?? 'Remove the detail or replace it with what the material supports.',
             'origin' => 'automated',
         ], $findings);
 

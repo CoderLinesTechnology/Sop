@@ -4,6 +4,7 @@ namespace App\Domain\Ai\Stages;
 
 use App\Domain\Ai\Pipeline\StageContext;
 use App\Domain\Ai\Prompts\PromptValue;
+use App\Domain\Ai\Samples\WritingSampleSelector;
 use App\Domain\Ai\Writing\DraftConverter;
 use App\Domain\Documents\DocumentModel;
 
@@ -65,6 +66,17 @@ final class PromptInputs
             'prompt_interpretation', 'essay_questions', 'qualities_to_demonstrate', 'experiences_to_emphasise',
             'missing_information', 'risks',
         ]));
+    }
+
+    /**
+     * Writing samples for the prompts that produce or plan document text
+     * (sent as untrusted data; usage rules in WritingSampleNote).
+     *
+     * @return list<array<string, string>>
+     */
+    public static function writingSamples(StageContext $ctx): array
+    {
+        return WritingSampleSelector::forPrompt($ctx->writingSamples());
     }
 
     /** Structured context for the fake provider (never sent to a real API). */

@@ -62,34 +62,75 @@ final class TextExtractor
         ])->save();
     }
 
+    /**
+     * Plain, normalised text from raw file contents (pdf, docx or txt) that
+     * are not stored as an upload, e.g. an administrator's writing sample.
+     * Returns an empty string when the file has no readable text.
+     */
+    public function textFromContents(string $contents, string $extension): string
+    {
+        $text = match ($extension) {
+            'pdf' => $this->pdfTextFromContents($contents),
+            'docx' => $this->fromDocx($contents),
+            'txt' => $contents,
+            default => '',
+        };
+
+        return $this->normalize($text);
+    }
+
     /** @return array{0:string,1:?int} */
     private function fromPdf(UploadedFile $file): array
     {
         $temp = $this->vault->toTempFile($file->path, 'pdf', $file->disk, $file->is_encrypted);
 
         try {
-            $binary = (string) config('statementra.documents.pdftotext_binary');
-            if ($binary !== '' && is_executable($binary)) {
-                $output = $this->pdftotext($binary, $temp);
-                if ($output !== null) {
-                    // Reading order handles columns well but joins every line ending in "-"
-                    // with the next line ("2019-" + "2023)" becomes "20192023)"). Raw mode
-                    // keeps those hyphens; use it to put back the ones that were real.
-                    $raw = $this->pdftotext($binary, $temp, raw: true);
-                    if ($raw !== null) {
-                        $output = self::restoreLineEndHyphens($output, $raw);
-                    }
-
-                    return [str_replace("\f", "\n\n", $output), substr_count($output, "\f") ?: null];
-                }
-            }
-
-            $pdf = (new PdfParser)->parseFile($temp);
-
-            return [$pdf->getText(), count($pdf->getPages())];
+            return $this->pdfFromPath($temp);
         } finally {
             @unlink($temp);
         }
+    }
+
+    private function pdfTextFromContents(string $contents): string
+    {
+        $directory = storage_path('app/tmp');
+        if (! is_dir($directory)) {
+            mkdir($directory, 0700, true);
+        }
+
+        $temp = $directory.'/'.bin2hex(random_bytes(12)).'.pdf';
+        file_put_contents($temp, $contents);
+        chmod($temp, 0600);
+
+        try {
+            return $this->pdfFromPath($temp)[0];
+        } finally {
+            @unlink($temp);
+        }
+    }
+
+    /** @return array{0:string,1:?int} */
+    private function pdfFromPath(string $temp): array
+    {
+        $binary = (string) config('statementra.documents.pdftotext_binary');
+        if ($binary !== '' && is_executable($binary)) {
+            $output = $this->pdftotext($binary, $temp);
+            if ($output !== null) {
+                // Reading order handles columns well but joins every line ending in "-"
+                // with the next line ("2019-" + "2023)" becomes "20192023)"). Raw mode
+                // keeps those hyphens; use it to put back the ones that were real.
+                $raw = $this->pdftotext($binary, $temp, raw: true);
+                if ($raw !== null) {
+                    $output = self::restoreLineEndHyphens($output, $raw);
+                }
+
+                return [str_replace("\f", "\n\n", $output), substr_count($output, "\f") ?: null];
+            }
+        }
+
+        $pdf = (new PdfParser)->parseFile($temp);
+
+        return [$pdf->getText(), count($pdf->getPages())];
     }
 
     private function pdftotext(string $binary, string $path, bool $raw = false): ?string
