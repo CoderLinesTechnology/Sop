@@ -95,6 +95,8 @@ Your **{{service_name}}** for {{programme}} at {{institution}} is attached to th
 - **PDF** — polished and ready to submit
 - **Word (.docx)** — fully editable
 
+{{section:points_to_check|Before you submit, please check these choices we made for you}}
+
 {{button:order_link|View your document}}
 
 **Revisions:** {{revisions_remaining}} revision(s) included until {{revision_deadline}}. Use the link above to request changes.

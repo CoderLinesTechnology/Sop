@@ -273,6 +273,7 @@ class FakeOutputs
             'paragraph_plan' => $plan,
             'tone' => 'Reflective, precise and confident without overstatement.',
             'avoid' => ['Generic statements about the field', 'Repeating the CV line by line'],
+            'proposals_to_confirm' => $ids(['career_goal']) === [] ? ['We proposed your future goals from your experience, because you did not state them.'] : [],
         ];
     }
 

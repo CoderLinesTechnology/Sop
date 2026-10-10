@@ -151,34 +151,49 @@ class SafeHttpClient
     /** @throws SafeHttpException */
     private function request(string $url, string $host, string $ip): ResponseInterface
     {
-        $pin = str_contains($ip, ':') ? "[{$ip}]" : $ip;
-
         try {
-            return (new Client)->get($url, [
-                RequestOptions::ALLOW_REDIRECTS => false,
-                RequestOptions::CONNECT_TIMEOUT => 5,
-                RequestOptions::TIMEOUT => 12,
-                RequestOptions::HTTP_ERRORS => false,
-                RequestOptions::HEADERS => [
-                    'User-Agent' => 'StatementraVerifier/1.0 (+https://'.config('statementra.brand.domain').'/bot)',
-                    'Accept' => 'text/html,application/xhtml+xml,text/plain;q=0.8,application/pdf;q=0.5',
-                    'Accept-Language' => 'en',
-                ],
-                RequestOptions::PROGRESS => function ($expected, $downloaded) {
-                    if ($expected > self::MAX_BYTES * 5 || $downloaded > self::MAX_BYTES) {
-                        throw new SafeHttpException('Response too large.');
-                    }
-                },
-                'curl' => [
-                    CURLOPT_RESOLVE => ["{$host}:443:{$pin}"],
-                    CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
-                ],
-            ]);
+            return (new Client)->get($url, $this->requestOptions($host, $ip));
         } catch (SafeHttpException $e) {
             throw $e;
         } catch (GuzzleException $e) {
             throw new SafeHttpException('Request failed: '.$e->getMessage(), previous: $e);
         }
+    }
+
+    /**
+     * Guzzle options for one pinned HTTPS request. Guzzle 8 rejects cURL options it manages itself
+     * (protocols, redirects), so those go through request options; only CURLOPT_RESOLVE stays raw.
+     *
+     * @internal public for tests
+     *
+     * @return array<string, mixed>
+     */
+    public function requestOptions(string $host, string $ip): array
+    {
+        $pin = str_contains($ip, ':') ? "[{$ip}]" : $ip;
+
+        return [
+            RequestOptions::ALLOW_REDIRECTS => false,
+            RequestOptions::CONNECT_TIMEOUT => 5,
+            RequestOptions::TIMEOUT => 12,
+            RequestOptions::HTTP_ERRORS => false,
+            RequestOptions::HEADERS => [
+                'User-Agent' => 'StatementraVerifier/1.0 (+https://'.config('statementra.brand.domain').'/bot)',
+                'Accept' => 'text/html,application/xhtml+xml,text/plain;q=0.8,application/pdf;q=0.5',
+                'Accept-Language' => 'en',
+            ],
+            RequestOptions::PROGRESS => function ($expected, $downloaded) {
+                if ($expected > self::MAX_BYTES * 5 || $downloaded > self::MAX_BYTES) {
+                    throw new SafeHttpException('Response too large.');
+                }
+            },
+            // HTTPS only. Guzzle 8 owns the protocol list (passing CURLOPT_PROTOCOLS fails every request).
+            'protocols' => ['https'],
+            'curl' => [
+                // Connect to the address that was checked, never a fresh DNS answer (no DNS rebinding).
+                CURLOPT_RESOLVE => ["{$host}:443:{$pin}"],
+            ],
+        ];
     }
 
     private function absolute(string $base, string $location): string

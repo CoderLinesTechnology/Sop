@@ -11,8 +11,9 @@ use League\CommonMark\CommonMarkConverter;
 /**
  * Renders admin-editable email templates.
  *
- * Bodies are Markdown with {{variable}} placeholders and button shortcodes
- * {{button:variable|Button text}}. Values are inserted as data: customer-
+ * Bodies are Markdown with {{variable}} placeholders, button shortcodes
+ * {{button:variable|Button text}} and list sections {{section:variable|Heading}}
+ * (left out entirely when the list is empty). Values are inserted as data: customer-
  * supplied text is Markdown- and HTML-escaped so it cannot inject links or
  * markup; only *_link variables (URLs we generate) are inserted as URLs, and
  * only if they point at this site.
@@ -38,6 +39,15 @@ final class TemplateRenderer
 
             return "\n\n{$token}\n\n";
         }, (string) $template->body) ?? '';
+
+        // {{section:list_variable|Heading}}: a bold heading and a bulleted list, or nothing at all when the list is empty.
+        $markdown = preg_replace_callback('/\{\{\s*section:([a-z_]+)\s*\|\s*([^}]+?)\s*\}\}/i', function ($m) use ($variables) {
+            $items = array_values(array_filter(array_map('strval', (array) ($variables[strtolower($m[1])] ?? []))));
+
+            return $items === []
+                ? ''
+                : "\n\n**".$this->escapeMarkdown(trim($m[2])).'**'."\n\n".implode("\n", array_map(fn (string $item) => '- '.$this->escapeMarkdown($item), $items))."\n\n";
+        }, $markdown) ?? $markdown;
 
         $markdown = $this->substitute($markdown, $variables, plain: false);
 

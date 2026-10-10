@@ -40,6 +40,17 @@
                             <a href="{{ route('orders.download', [$order->public_id, $version->uuid, 'pdf']) }}" class="btn-outline"><x-icon name="download" class="size-4" /> Download PDF</a>
                             <a href="{{ route('orders.download', [$order->public_id, $version->uuid, 'docx']) }}" class="btn-outline"><x-icon name="download" class="size-4" /> Word Document</a>
                         </div>
+                        @if ($pointsToCheck !== [])
+                            <div class="mt-6 rounded-[10px] border border-line bg-cream/60 p-5" role="note" aria-labelledby="check-heading">
+                                <p id="check-heading" class="font-semibold text-ink">Before you submit, please check these choices we made for you</p>
+                                <ul class="mt-3 list-disc space-y-1.5 pl-5 text-[0.92rem] text-body">
+                                    @foreach ($pointsToCheck as $point)
+                                        <li>{{ $point }}</li>
+                                    @endforeach
+                                </ul>
+                                <p class="mt-3 text-[0.85rem] text-muted">If anything isn’t right for you, request a revision below.</p>
+                            </div>
+                        @endif
                     </section>
 
                     {{-- Revision --}}

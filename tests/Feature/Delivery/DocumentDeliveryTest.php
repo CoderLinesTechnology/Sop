@@ -5,6 +5,8 @@ use App\Domain\Email\EmailSender;
 use App\Domain\Files\FileVault;
 use App\Enums\EmailStatus;
 use App\Enums\OrderStatus;
+use App\Models\AiJob;
+use App\Models\AiJobStep;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Models\EmailMessage;
@@ -99,4 +101,35 @@ it('marks the delivery failed after the last attempt, and resends on request', f
     expect($order->refresh()->status)->toBe(OrderStatus::Delivered)
         ->and(SwitchableTransport::$sent)->toBe(1)
         ->and(EmailMessage::query()->where('order_id', $order->id)->where('status', EmailStatus::Sent->value)->count())->toBe(1);
+});
+
+/** The version came from an AI job whose strategy proposed these points. */
+function versionWithProposals(Order $order, array $proposals): DocumentVersion
+{
+    $job = AiJob::query()->create(['order_id' => $order->id, 'kind' => AiJob::KIND_ORDER, 'dedupe_key' => 'test:'.$order->id, 'status' => 'completed', 'workflow_snapshot' => [], 'provider' => 'fake']);
+    AiJobStep::query()->create(['ai_job_id' => $job->id, 'stage' => 'strategy', 'sequence' => 1, 'attempt' => 1, 'status' => 'completed', 'output' => ['strategy' => ['proposals_to_confirm' => $proposals]]]);
+    $version = finishedVersion($order);
+    $version->forceFill(['ai_job_id' => $job->id])->save();
+
+    return $version;
+}
+
+it('lists the choices we made for the customer in the delivery email', function () {
+    $order = Order::factory()->paid(OrderStatus::FinalReview)->create(['email' => 'ama@example.com']);
+    $version = versionWithProposals($order, ['We chose the Vision Lab\'s waste-sorting project as your research focus because of your MyClean app.']);
+
+    app(DocumentDelivery::class)->deliver($order, $version);
+
+    $html = (string) app('mailer')->getSymfonyTransport()->messages()->sole()->getOriginalMessage()->getHtmlBody();
+    expect($html)->toContain('Before you submit, please check these choices we made for you')
+        ->toContain('waste-sorting project as your research focus');
+});
+
+it('leaves the check section out when everything came from the customer', function () {
+    $order = Order::factory()->paid(OrderStatus::FinalReview)->create(['email' => 'ama@example.com']);
+
+    app(DocumentDelivery::class)->deliver($order, versionWithProposals($order, []));
+
+    $html = (string) app('mailer')->getSymfonyTransport()->messages()->sole()->getOriginalMessage()->getHtmlBody();
+    expect($html)->not->toContain('Before you submit')->not->toContain('{{section');
 });

@@ -51,6 +51,7 @@ class DocumentDelivery
             'revisions_remaining' => (string) $order->revisionsRemaining(),
             'revision_deadline' => ($order->revision_deadline_at ?? now()->addDays((int) data_get($order->service_snapshot, 'revision_window_days', 14)))->format('j F Y'),
             'revision_number' => (string) ($revision?->number ?? ''),
+            'points_to_check' => $revision ? [] : PointsToCheck::for($version),
         ];
 
         $email = $this->mailer->send(

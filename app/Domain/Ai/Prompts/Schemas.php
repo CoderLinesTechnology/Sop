@@ -218,6 +218,7 @@ final class Schemas
             ]), 20),
             'tone' => self::str(),
             'avoid' => self::arr(self::str(), 12),
+            'proposals_to_confirm' => self::arr(self::str(), 6),
         ]);
     }
 

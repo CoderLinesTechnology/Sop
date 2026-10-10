@@ -30,6 +30,7 @@ final class SampleEmailVariables
             'pdf_link' => url('/orders/sample-preview/document.pdf'),
             'docx_link' => url('/orders/sample-preview/document.docx'),
             'revisions_remaining' => '1',
+            'points_to_check' => ['We chose the Computational Linguistics Lab\'s low-resource translation project as your research focus because of your Twi speech prototype.'],
             'revision_deadline' => now()->addDays(14)->format('j F Y'),
             'revision_number' => '1',
             'refund_amount' => Money::format(8900, $currency),

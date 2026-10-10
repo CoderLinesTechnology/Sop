@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Checkout;
 
 use App\Domain\Ai\PipelineDispatcher;
+use App\Domain\Delivery\PointsToCheck;
 use App\Domain\Files\FileVault;
 use App\Domain\Orders\InformationRequestService;
 use App\Domain\Orders\OrderProgress;
@@ -50,6 +51,7 @@ class OrderController extends Controller
             'steps' => $progress->steps($order),
             'informationRequest' => $order->openInformationRequest,
             'followupStarters' => $this->followupStarters(),
+            'pointsToCheck' => $version ? PointsToCheck::for($version) : [],
             'version' => $version,
             'revisionEligibility' => app(RevisionService::class)->eligibility($order),
             'openRevision' => $order->revisions->first(fn ($r) => $r->status->isOpen()),

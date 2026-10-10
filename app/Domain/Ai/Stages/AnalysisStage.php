@@ -12,6 +12,7 @@ use App\Domain\Orders\InformationRequestService;
 use App\Enums\PipelineStage;
 use App\Enums\StepStatus;
 use App\Models\AiJobStep;
+use App\Models\InformationRequest;
 use App\Models\UploadedFile;
 
 /**
@@ -74,9 +75,16 @@ class AnalysisStage implements Stage
         return StageResult::completed($analysis + ['information_requested' => false]);
     }
 
-    /** Whether this job already asked the customer (each job asks at most once). */
+    /**
+     * Whether the customer was already asked: by this job, or on this order before
+     * (a regeneration starts a new job but must not send the same kind of questions again).
+     */
     private function askedBefore(StageContext $ctx): bool
     {
+        if (InformationRequest::query()->where('order_id', $ctx->order->id)->where('source', 'ai')->where('status', 'answered')->exists()) {
+            return true;
+        }
+
         return AiJobStep::query()
             ->where('ai_job_id', $ctx->job->id)
             ->where('stage', PipelineStage::Analysis->value)

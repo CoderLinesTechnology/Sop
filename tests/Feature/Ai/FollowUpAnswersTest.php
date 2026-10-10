@@ -3,9 +3,12 @@
 use App\Domain\Ai\PipelineDispatcher;
 use App\Domain\Orders\InformationRequestService;
 use App\Enums\AiJobStatus;
+use App\Enums\OrderStatus;
+use App\Models\AdminUser;
 use App\Models\AiJobStep;
 use App\Models\Applicant;
 use App\Models\InformationRequest;
+use App\Models\Order;
 use Tests\Feature\Ai\Support\PipelineFixtures;
 
 uses(PipelineFixtures::class);
@@ -50,4 +53,17 @@ it('reads everything again when there is no applicant profile to add to', functi
 
     expect($job->fresh()->status)->toBe(AiJobStatus::Completed)
         ->and(AiJobStep::query()->where('ai_job_id', $job->id)->where('stage', 'ingestion')->count())->toBe(2);
+});
+
+it('does not ask the customer again when the document is regenerated', function () {
+    [$order, $job, $request] = orderAskedForMore($this);
+    app(InformationRequestService::class)->answer($request, ['q1' => 'I studied Electrical Engineering at KNUST and installed solar mini-grids for two years.']);
+    expect($job->fresh()->status)->toBe(AiJobStatus::Completed);
+
+    // As in production: the order sits in manual review and an administrator regenerates it.
+    Order::query()->whereKey($order->id)->update(['status' => OrderStatus::ManualReview->value]);
+    $again = app(PipelineDispatcher::class)->regenerate($order->fresh(), AdminUser::factory()->create());
+
+    expect(InformationRequest::query()->where('order_id', $order->id)->count())->toBe(1)
+        ->and($again->fresh()->status)->not->toBe(AiJobStatus::WaitingForCustomer);
 });

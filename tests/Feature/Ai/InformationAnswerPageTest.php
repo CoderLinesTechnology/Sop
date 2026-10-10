@@ -128,3 +128,19 @@ it('explains instead of showing "session expired" when the form was left open to
         ->assertSee('saved on this device, but not sent yet')
         ->assertSee(route('orders.show', $order->public_id), false);
 });
+
+it('saves an answer to a long follow-up question (the stored label once held only 255 characters)', function () {
+    [$order] = orderWaitingForAnswer($this);
+    $question = 'What are two or three concrete examples of work you did in your teaching, training, or tutoring roles, and which role does each belong to? '.str_repeat('Include any materials you created, learners you supported, or results you can describe. ', 3);
+    expect(mb_strlen($question))->toBeGreaterThan(255);
+
+    $request = app(InformationRequestService::class)->request($order->fresh(), [['question' => $question, 'why' => 'Evidence of teaching.']]);
+
+    $this->post(route('orders.information', $order->public_id), ['answers' => ['q1' => 'Science Teacher, Messiah Baptist JHS: I prepare lesson plans.']])
+        ->assertRedirect(route('orders.show', $order->public_id))
+        ->assertSessionHasNoErrors();
+
+    expect($request->fresh()->status)->toBe('answered')
+        ->and($order->answers()->where('field_key', 'followup_'.$request->id.'_q1')->value('label'))->toBe($request->questions[0]['question'])
+        ->and(mb_strlen($request->questions[0]['question']))->toBeGreaterThan(255);
+});

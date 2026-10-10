@@ -50,6 +50,7 @@ final class Settings
             'orders.needs_info_timeout_hours' => 72,
             'orders.needs_info_timeout_action' => 'proceed',
             'orders.followup_starters' => [
+                'Please choose what fits me best based on my details.',
                 'For example, …',
                 'One specific moment was when …',
                 'What I did was …, and the result was …',

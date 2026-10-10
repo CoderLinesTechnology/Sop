@@ -14,6 +14,7 @@ use App\Enums\ClaimVerificationStatus as V;
 use App\Enums\PipelineStage;
 use App\Models\ResearchClaim;
 use App\Models\ResearchSource;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Builds the Research Dossier (research_sources + research_claims).
@@ -164,6 +165,18 @@ class VerificationStage implements Stage
         }
 
         $counts = array_count_values(array_map(fn ($r) => $r['status']->value, $rows));
+
+        // Every source failing to load means verification cannot work at all (and the writer gets no
+        // programme facts): that is a fault on our side, not a property of the pages, so make it visible.
+        $loaded = count(array_filter($fetched, fn (array $page) => $page['status'] === 'ok'));
+        if (count($fetched) >= 3 && $loaded === 0) {
+            $errors = array_values(array_unique(array_filter(array_map(fn (array $page) => $page['error'] ? mb_substr((string) $page['error'], 0, 200) : null, $fetched))));
+            Log::warning('No research source page could be fetched; claims stay unverified.', [
+                'order' => $ctx->order->reference,
+                'pages' => count($fetched),
+                'errors' => array_slice($errors, 0, 3),
+            ]);
+        }
 
         return StageResult::completed([
             'claims' => count($rows),

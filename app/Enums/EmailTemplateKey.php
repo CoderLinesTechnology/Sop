@@ -58,7 +58,7 @@ enum EmailTemplateKey: string implements HasLabel
             self::PaymentReceived => [...$order, 'amount_paid', 'delivery_time'],
             self::InformationRequired, self::InformationReminder => [...$order, 'questions'],
             self::ProcessingDelay => [...$order, 'delivery_time'],
-            self::DocumentReady => [...$order, 'document_link', 'pdf_link', 'docx_link', 'revisions_remaining', 'revision_deadline'],
+            self::DocumentReady => [...$order, 'document_link', 'pdf_link', 'docx_link', 'revisions_remaining', 'revision_deadline', 'points_to_check'],
             self::RevisionReceived => [...$order, 'revision_number'],
             self::RevisionCompleted => [...$order, 'revision_number', 'document_link'],
             self::RefundProcessed => [...$order, 'refund_amount'],
