@@ -5,7 +5,7 @@
     $processing = $status->isProcessing() || in_array($status, [OrderStatus::ProcessingFailed, OrderStatus::ManualReview, OrderStatus::DeliveryFailed], true);
     $needsInfo = $status === OrderStatus::NeedsInformation && $informationRequest;
     $config = ['status' => $status->value, 'steps' => $steps, 'poll' => $processing, 'progressUrl' => route('orders.progress', $order->public_id)];
-    $estimate = $order->service?->deliveryLabel() ?? '20–30 minutes';
+    $estimate = $order->service?->deliveryLabel() ?? '10–15 minutes';
 @endphp
 <x-layouts.site :seo="$seo" :scripts="['resources/js/checkout.js']" main-class="bg-[#f7f5f1]">
     <div class="container-site py-8 sm:py-12">
@@ -17,6 +17,10 @@
         @if (session('status'))
             <div class="mt-6 flex items-start gap-3 rounded-md bg-mint px-4 py-3 text-sm text-mint-ink" role="status"><x-icon name="check-circle" class="mt-0.5 size-5 shrink-0" /> {{ session('status') }}</div>
         @endif
+        @unless ($needsInfo)
+            {{-- No open questions: answers kept in this browser while they were being written are no longer needed. --}}
+            <div hidden data-draft-clear="followup:{{ $order->public_id }}:"></div>
+        @endunless
 
         <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
             <div class="space-y-6">
@@ -102,11 +106,13 @@
                         <x-ui.icon-badge icon="message" color="yellow" size="lg" />
                         <h1 id="info-heading" class="display-2 mt-5">We need one more detail to make your document stronger.</h1>
                         <p class="lead mt-3">We never invent information. Please answer every question: a few sentences each is enough, and every answer makes your document more personal and stronger.</p>
-                        <form method="POST" action="{{ route('orders.information', $order->public_id) }}" class="mt-6 space-y-5" data-submit-once>
+                        <form method="POST" action="{{ route('orders.information', $order->public_id) }}" class="mt-6 space-y-5" data-submit-once
+                              data-draft-key="followup:{{ $order->public_id }}:{{ $informationRequest->requested_at?->timestamp }}" data-keepalive-url="{{ route('orders.progress', $order->public_id) }}">
                             @csrf
                             @foreach ($informationRequest->questions as $question)
                                 <div>
                                     <x-form.textarea :name="'answers['.$question['key'].']'" :label="$question['question']" rows="3" maxlength="3000" :help="$question['why'] ?: null" />
+                                    <x-form.starters :starters="$question['suggestions'] ?? []" :target="'f-answers-'.$question['key']" label="Suggested answers from your details (tap one, then make it yours):" />
                                     <x-form.starters :starters="$followupStarters" :target="'f-answers-'.$question['key']" />
                                 </div>
                             @endforeach

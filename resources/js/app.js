@@ -147,8 +147,76 @@ function initAnswerStarters() {
     });
 }
 
+/*
+ * Answers survive a lost connection or an expired session: a form with
+ * data-draft-key keeps its text fields in this browser (for up to three days)
+ * and fills them in again when the page is opened. A page with data-draft-clear
+ * removes drafts that are no longer needed (the answers were sent). While such
+ * a form is open, data-keepalive-url is fetched every few minutes so the
+ * session, and with it the form's security token, does not expire.
+ */
+const DRAFT_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+
+function storage() {
+    try {
+        return window.localStorage;
+    } catch {
+        return null;
+    }
+}
+
+function initFormDrafts() {
+    const store = storage();
+    if (!store) return;
+
+    document.querySelectorAll('[data-draft-clear]').forEach((element) => {
+        try {
+            Object.keys(store).filter((key) => key.startsWith(element.dataset.draftClear)).forEach((key) => store.removeItem(key));
+        } catch {
+            // Storage unavailable: nothing to clear.
+        }
+    });
+
+    document.querySelectorAll('form[data-draft-key]').forEach((form) => {
+        const key = form.dataset.draftKey;
+        const fields = () => Array.from(form.querySelectorAll('textarea[name], input[type="text"][name]'));
+
+        try {
+            const draft = JSON.parse(store.getItem(key) || 'null');
+            if (draft && Date.now() - draft.savedAt < DRAFT_TTL_MS) {
+                fields().forEach((field) => {
+                    if (!field.value && typeof draft.values?.[field.name] === 'string') field.value = draft.values[field.name];
+                });
+            } else if (draft) {
+                store.removeItem(key);
+            }
+        } catch {
+            store.removeItem(key);
+        }
+
+        form.addEventListener('input', () => {
+            const values = {};
+            fields().forEach((field) => {
+                if (field.value) values[field.name] = field.value;
+            });
+            try {
+                store.setItem(key, JSON.stringify({ savedAt: Date.now(), values }));
+            } catch {
+                // Storage full or blocked: the form still works.
+            }
+        });
+
+        if (form.dataset.keepaliveUrl) {
+            setInterval(() => {
+                fetch(form.dataset.keepaliveUrl, { credentials: 'same-origin', headers: { Accept: 'application/json' } }).catch(() => {});
+            }, 5 * 60 * 1000);
+        }
+    });
+}
+
 initNavigation();
 initCountdowns();
 initFormStartBeacon();
 initSubmitOnce();
 initAnswerStarters();
+initFormDrafts();

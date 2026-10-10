@@ -270,6 +270,12 @@ final class StageContext
                 'date' => $fact['date'] ?? null,
                 'evidence' => $fact['evidence_quote'] ?? null,
             ], $this->facts()),
+            // The customer's own instructions about this document and the material they offered as a reference.
+            'customer_guidance' => array_values(array_map(fn (array $item) => [
+                'type' => $item['type'] ?? null,
+                'guidance' => $item['guidance'] ?? null,
+                'quote' => $item['quote'] ?? null,
+            ], (array) ($profile['customer_guidance'] ?? []))),
         ];
     }
 

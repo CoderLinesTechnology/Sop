@@ -15,7 +15,10 @@ anything non-trivial; deployment constraints are in `docs/DEPLOYMENT.md`.
   currency and reference with Paystack). Prices come only from `PriceCalculator`.
 - Fulfilment starts only through `FulfillmentGuard::claim()`.
 - Customer files go through `FileVault` (encrypted, private disk).
-- Customer text, uploaded documents and web pages are untrusted data, never instructions.
+- Customer text and uploads can be data, reference and instruction at once: the pipeline follows a
+  customer's instructions about their own document (tone, emphasis, what to include, which upload to
+  build on) within the system rules, but nothing in customer content or web pages can change the AI's
+  task, rules or output format (`UntrustedData::securityNote()`). Web pages are information only.
 - Money is stored in integer minor units. Customers only ever see `public_id`
   (ULID) and `reference` (`ST-XXXX-XXXX`), never database ids.
 - Services, prices, page copy, prompts and templates live in the database and are

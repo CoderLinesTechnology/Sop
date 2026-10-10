@@ -93,3 +93,19 @@ it('uses a soft target band only when nothing official limits the length', funct
         ->and($checker->check(paragraphs(str_repeat('word ', 200)), new ResolvedRequirements(targetWords: 650), null, 650)['hard'])->toBeFalse()
         ->and($checker->check(paragraphs(str_repeat('word ', 600)), new ResolvedRequirements(targetWords: 650), null, 650)['ok'])->toBeTrue();
 });
+
+it('allows one em dash but flags a second, and catches semicolon runs, ellipses and self-praise', function () {
+    $one = paragraphs('I rebuilt the parser — twice — before it held.');
+    $single = paragraphs('I rebuilt the parser — and it finally held under load.');
+    $loose = paragraphs(
+        'I tested the pump; it failed; I fixed the seal; it held; the farm used it all season.',
+        'The results were mixed... but promising.',
+        'I am passionate about renewable energy and I am a quick learner.',
+    );
+
+    $types = fn ($doc) => array_column((new StyleLinter)->lint($doc, []), 'type');
+
+    expect($types($one))->toContain('dash_overuse')
+        ->and($types($single))->not->toContain('dash_overuse')
+        ->and($types($loose))->toContain('semicolon_overuse', 'ellipsis', 'empty_claim');
+});

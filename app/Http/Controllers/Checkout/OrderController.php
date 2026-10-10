@@ -23,6 +23,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * The customer's secure order page (no account needed). Access is granted by
@@ -65,7 +66,7 @@ class OrderController extends Controller
         if ($order->status->isProcessing()) {
             try {
                 app(PipelineDispatcher::class)->kickIfDue($order);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 report($e);
             }
         }
@@ -130,7 +131,12 @@ class OrderController extends Controller
                 return redirect()->route('orders.show', $order->public_id)->with('status', "We've already received your answer and are working on your document.");
             }
 
-            return back()->withErrors(['answers' => $e->getMessage()]);
+            return back()->withInput()->withErrors(['answers' => $e->getMessage()]);
+        } catch (Throwable $e) {
+            // Nothing was saved (the transaction rolled back): keep what they typed and let them send it again.
+            report($e);
+
+            return back()->withInput()->withErrors(['answers' => "We couldn't save your answers just now. What you typed is still here; please press Send again in a moment."]);
         }
 
         return redirect()->route('orders.show', $order->public_id)->with('status', "Thank you — we've received your answer and continued working on your document.");

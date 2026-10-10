@@ -7,6 +7,7 @@ use App\Domain\Ai\Llm\LlmGateway;
 use App\Domain\Ai\Pipeline\StageContext;
 use App\Domain\Ai\Pipeline\StageResult;
 use App\Domain\Ai\Prompts\PromptValue;
+use App\Domain\Ai\Prompts\UntrustedData;
 use App\Domain\Ai\Research\QuoteMatcher;
 use App\Domain\Files\FileVault;
 use App\Domain\Files\TextExtractor;
@@ -263,6 +264,49 @@ class IngestionStage implements Stage
                 'fact_ids' => array_values(array_filter((array) $i['fact_ids'], fn ($id) => isset($known[$id]))),
             ], (array) $data['inconsistencies'])),
             'gaps' => array_values((array) $data['gaps']),
+            'customer_guidance' => $this->guidance((array) ($data['customer_guidance'] ?? []), $answerText, $fileText, $visualIds, $orderDetails),
         ], $dropped];
+    }
+
+    /**
+     * The customer's own instructions about the document (tone, emphasis, what
+     * to include or leave out, structure) and the material they offer as a
+     * reference (an earlier draft, an example, requirements). Kept only when the
+     * quote is found in the cited source, like a fact.
+     *
+     * @return list<array{type:string, source_ref:string, quote:string, guidance:string}>
+     */
+    private function guidance(array $items, array $answerText, array $fileText, array $visualIds, array $orderDetails): array
+    {
+        $kept = [];
+        foreach (array_slice($items, 0, 15) as $item) {
+            $type = (string) ($item['type'] ?? '');
+            $ref = trim((string) ($item['source_ref'] ?? ''));
+            $quote = (string) ($item['quote'] ?? '');
+            $text = trim((string) ($item['guidance'] ?? ''));
+            // Attempts to steer the pipeline are never customer guidance, whatever the model returned.
+            if (! in_array($type, ['instruction', 'reference'], true) || $text === ''
+                || UntrustedData::looksLikeInjection($quote) || UntrustedData::looksLikeInjection($text)) {
+                continue;
+            }
+
+            $sourceType = (string) ($item['source_type'] ?? '');
+            $ref = (string) (preg_replace(['/^answers?[.:]/', '/^(files?|file_id)[.:]\s*/', '/^order[.:]/'], '', $ref) ?? $ref);
+
+            // The text the quote must be found in; true for an image or scan that cannot be checked.
+            $source = match ($sourceType) {
+                'answer' => $answerText[$ref] ?? null,
+                'file' => $fileText[$ref] ?? (isset($visualIds[$ref]) ? true : null),
+                'order' => isset($orderDetails[$ref]) ? (string) $orderDetails[$ref] : null,
+                default => null,
+            };
+            if ($source === null || (is_string($source) && ! $this->quotes->matches($quote, $source, self::QUOTE_THRESHOLD))) {
+                continue;
+            }
+
+            $kept[] = ['type' => $type, 'source_ref' => $ref, 'quote' => mb_substr($quote, 0, 500), 'guidance' => mb_substr($text, 0, 500)];
+        }
+
+        return $kept;
     }
 }

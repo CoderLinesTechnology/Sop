@@ -78,7 +78,7 @@ final class Schemas
                 'source_ref' => self::str(),
                 'evidence_quote' => self::str(),
                 'confidence' => self::enum(['high', 'medium', 'low']),
-            ]), 120),
+            ]), 80),
             'inconsistencies' => self::arr(self::obj([
                 'description' => self::str(),
                 'fact_ids' => self::arr(self::str(), 10),
@@ -88,6 +88,13 @@ final class Schemas
                 'critical' => self::bool(),
                 'why' => self::str(),
             ]), 20),
+            'customer_guidance' => self::arr(self::obj([
+                'type' => self::enum(['instruction', 'reference']),
+                'source_type' => self::enum(['answer', 'file', 'order']),
+                'source_ref' => self::str(),
+                'quote' => self::str(),
+                'guidance' => self::str(),
+            ]), 15),
         ]);
     }
 
@@ -141,6 +148,7 @@ final class Schemas
                 'question' => self::str(),
                 'why' => self::str(),
                 'critical' => self::bool(),
+                'suggested_answers' => self::arr(self::str(), 3),
             ]), 10),
             'risks' => self::arr(self::str(), 10),
         ]);

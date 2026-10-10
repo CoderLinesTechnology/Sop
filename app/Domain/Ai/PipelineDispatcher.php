@@ -152,9 +152,11 @@ class PipelineDispatcher
             $updates = $staysPaused ? [] : ['next_run_at' => now()];
 
             if ($job->status === AiJobStatus::WaitingForCustomer) {
-                $updates['current_stage'] = ($reason === 'information_received'
-                    ? $this->stageAfterAnswers($job)
-                    : (StagePlan::after($job, PipelineStage::Analysis) ?? StagePlan::first($job)))->value;
+                $updates['current_stage'] = (match ($reason) {
+                    'information_received' => $this->stageAfterAnswers($job),
+                    'information_received_full' => StagePlan::first($job),
+                    default => StagePlan::after($job, PipelineStage::Analysis) ?? StagePlan::first($job),
+                })->value;
                 $updates['status'] = ($staysPaused ? AiJobStatus::Paused : AiJobStatus::Running)->value;
 
                 if ($order->status === OrderStatus::NeedsInformation) {

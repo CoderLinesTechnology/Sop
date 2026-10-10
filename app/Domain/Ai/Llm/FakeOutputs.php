@@ -62,8 +62,14 @@ class FakeOutputs
             ];
         };
 
+        $guidance = [];
         foreach ((array) ($c['answers'] ?? []) as $answer) {
             $key = (string) $answer['key'];
+            if ($key === 'additional_notes') {
+                // A note about the document is an instruction (it may also contain facts, recorded below).
+                $quote = Str::words((string) $answer['answer'], 30, '');
+                $guidance[] = ['type' => 'instruction', 'source_type' => 'answer', 'source_ref' => $key, 'quote' => $quote, 'guidance' => 'Follow the customer\'s note: '.$quote];
+            }
             if ($answer['section'] === 'details' || ($answer['section'] === 'application' && ! str_starts_with($key, 'followup_'))) {
                 continue;
             }
@@ -94,6 +100,7 @@ class FakeOutputs
             'facts' => $facts,
             'inconsistencies' => [],
             'gaps' => $hasStory ? [] : [['item' => 'Academic or professional background and motivation', 'critical' => true, 'why' => 'Nothing describes the applicant\'s experience.']],
+            'customer_guidance' => $guidance,
         ];
     }
 
@@ -130,10 +137,11 @@ class FakeOutputs
                 'question' => 'Could you briefly describe your academic or work background and what first drew you to this field?',
                 'why' => 'There is not enough about your experience to write an accurate, specific document.',
                 'critical' => true,
+                'suggested_answers' => ['I studied … at …, and what first drew me to this field was …', 'In my work as … I …, which made me want to …'],
             ];
         }
         if (! array_filter($facts, fn ($f) => ($f['category'] ?? '') === 'career_goal')) {
-            $missing[] = ['question' => 'What would you like to do after completing this programme?', 'why' => 'Goals help show programme fit.', 'critical' => false];
+            $missing[] = ['question' => 'What would you like to do after completing this programme?', 'why' => 'Goals help show programme fit.', 'critical' => false, 'suggested_answers' => ['After the programme, I want to …']];
         }
 
         preg_match('/(\d[\d,]*)\s*words/i', $question, $words);

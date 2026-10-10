@@ -18,6 +18,7 @@ use App\Support\Audit;
 use App\Support\Settings;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Throwable;
 
 /**
  * When essential information is missing the system asks instead of
@@ -28,13 +29,16 @@ class InformationRequestService
 {
     public const MAX_QUESTIONS = 5;
 
+    /** Suggested answers kept per question (drafted from the applicant's own material; the customer edits them). */
+    public const MAX_SUGGESTIONS = 3;
+
     public function __construct(
         private readonly OrderStateMachine $states,
         private readonly TransactionalMailer $mailer,
     ) {}
 
     /**
-     * @param  list<array{question:string, why?:string, key?:string}|string>  $questions
+     * @param  list<array{question:string, why?:string, key?:string, suggestions?:list<string>}|string>  $questions
      */
     public function request(Order $order, array $questions, string $source = 'ai', ?AdminUser $admin = null): InformationRequest
     {
@@ -48,6 +52,7 @@ class InformationRequestService
                 'key' => 'q'.($i + 1),
                 'question' => mb_substr($text, 0, 500),
                 'why' => is_array($q) ? mb_substr(trim((string) ($q['why'] ?? '')), 0, 300) : '',
+                'suggestions' => is_array($q) ? self::suggestions((array) ($q['suggestions'] ?? [])) : [],
             ];
         }
 
@@ -89,6 +94,20 @@ class InformationRequestService
         return $request;
     }
 
+    /** @return list<string> */
+    private static function suggestions(array $suggestions): array
+    {
+        $clean = [];
+        foreach ($suggestions as $suggestion) {
+            $text = is_string($suggestion) ? trim(preg_replace('/\s+/u', ' ', $suggestion) ?? '') : '';
+            if ($text !== '' && ! in_array($text, $clean, true)) {
+                $clean[] = mb_substr($text, 0, 400);
+            }
+        }
+
+        return array_slice($clean, 0, self::MAX_SUGGESTIONS);
+    }
+
     /**
      * Store the customer's answers and resume processing.
      *
@@ -114,7 +133,8 @@ class InformationRequestService
 
         $order = $request->order;
 
-        DB::transaction(function () use ($request, $clean, $order) {
+        $merged = false;
+        DB::transaction(function () use ($request, $clean, $order, &$merged) {
             // Two submissions at once: only the first may save and resume.
             if (InformationRequest::query()->whereKey($request->id)->lockForUpdate()->value('status') !== 'open') {
                 throw new InvalidArgumentException('This question has already been answered.');
@@ -133,15 +153,26 @@ class InformationRequestService
             }
 
             // Into the applicant profile directly, so the pipeline need not re-read every upload (no model call).
-            app(FollowUpFacts::class)->merge($request, $clean);
+            // If that fails, the answers are still saved and the job re-reads everything instead.
+            try {
+                $merged = app(FollowUpFacts::class)->merge($request, $clean);
+            } catch (Throwable $e) {
+                report($e);
+                $merged = false;
+            }
 
             if ($order->status === OrderStatus::NeedsInformation) {
                 $this->states->transition($order, OrderStatus::Researching, 'customer', reason: 'Customer provided requested information');
             }
         });
 
-        if ($order->latestAiJob) {
-            app(PipelineDispatcher::class)->resume($order, 'information_received');
+        // The answers are saved: a failure to restart work now must not reach the customer (the heartbeat retries).
+        try {
+            if ($order->latestAiJob) {
+                app(PipelineDispatcher::class)->resume($order, $merged ? 'information_received' : 'information_received_full');
+            }
+        } catch (Throwable $e) {
+            report($e);
         }
     }
 

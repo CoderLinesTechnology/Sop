@@ -62,7 +62,7 @@ class AnalysisStage implements Stage
         if ($critical !== [] && $allowed) {
             $optional = array_values(array_filter($analysis['missing_information'], fn ($m) => ! $m['critical']));
             $questions = array_map(
-                fn ($m) => ['question' => $m['question'], 'why' => $m['why']],
+                fn ($m) => ['question' => $m['question'], 'why' => $m['why'], 'suggestions' => (array) ($m['suggested_answers'] ?? [])],
                 array_slice([...$critical, ...$optional], 0, $maxQuestions),
             );
 

@@ -74,7 +74,7 @@ Page views / status polling / uptime ping ──► Heartbeat: retries, reconcil
 ## Contracts between subsystems
 
 - Payments → AI: `PipelineDispatcher::startForOrder(Order)` (idempotent, dedupe key `order:{id}:pipeline`).
-- AI → Orders: `InformationRequestService::request(Order, questions)`; customers' answers call `PipelineDispatcher::resume()`.
+- AI → Orders: `InformationRequestService::request(Order, questions)`; customers' answers call `PipelineDispatcher::resume()`. Answers are added to the applicant profile as verified facts by `FollowUpFacts` (no model call), so the job resumes at analysis instead of re-reading every upload; only an order without a profile starts again from ingestion.
 - AI → Documents: `RequirementResolver::resolve()`, `TemplateResolver::resolve()`, `DocumentFactory::createVersion()`, `DocumentRenderer::render()`, `DocumentQa::validate()`.
 - AI → Delivery: `DocumentDelivery::deliver(Order, DocumentVersion, ?Revision)`.
 - Writing samples → AI: `WritingSampleSelector::forJob()` picks a job's samples once (stored in `ai_jobs.writing_sample_ids`); strategy, writing, editorial, refinement and revision calls receive them as untrusted data, and `FactCheckStage` removes wording copied from them (`WritingSampleOverlap`). Compliance notes: `docs/compliance/REGISTER.md`.

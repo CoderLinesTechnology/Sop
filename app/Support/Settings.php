@@ -38,8 +38,8 @@ final class Settings
             'general.social_instagram' => null,
             'general.social_youtube' => null,
 
-            'orders.delivery_min_minutes' => 20,
-            'orders.delivery_max_minutes' => 30,
+            'orders.delivery_min_minutes' => 10,
+            'orders.delivery_max_minutes' => 15,
             'orders.max_file_size_mb' => 10,
             'orders.allowed_file_types' => ['pdf', 'docx', 'txt', 'jpg', 'png'],
             'orders.max_files_per_order' => 10,

@@ -227,21 +227,21 @@ class ServiceForm
 
                 Section::make('Delivery estimate')
                     ->description(fn (): string => 'Leave blank to use the global estimate from Settings → Orders ('
-                        .Settings::formatMinutesRange((int) Settings::get('orders.delivery_min_minutes', 20), (int) Settings::get('orders.delivery_max_minutes', 30)).').')
+                        .Settings::formatMinutesRange((int) Settings::get('orders.delivery_min_minutes', 10), (int) Settings::get('orders.delivery_max_minutes', 15)).').')
                     ->schema([
                         TextInput::make('delivery_min_minutes')
                             ->label('From (minutes)')
                             ->integer()
                             ->minValue(1)
                             ->maxValue(10080)
-                            ->placeholder((string) Settings::get('orders.delivery_min_minutes', 20)),
+                            ->placeholder((string) Settings::get('orders.delivery_min_minutes', 10)),
                         TextInput::make('delivery_max_minutes')
                             ->label('To (minutes)')
                             ->integer()
                             ->minValue(1)
                             ->maxValue(10080)
                             ->rules([FormRules::notLessThan('delivery_min_minutes', 'The upper estimate cannot be lower than the lower estimate.')])
-                            ->placeholder((string) Settings::get('orders.delivery_max_minutes', 30)),
+                            ->placeholder((string) Settings::get('orders.delivery_max_minutes', 15)),
                     ])
                     ->columns(2)
                     ->disabled(self::contentLocked()),

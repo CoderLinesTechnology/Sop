@@ -21,7 +21,7 @@ final class SampleEmailVariables
             'programme' => 'MSc Data Science',
             'order_link' => url('/orders/sample-preview'),
             'amount_paid' => Money::format(8900, $currency),
-            'delivery_time' => 'about '.Settings::formatMinutesRange((int) Settings::get('orders.delivery_min_minutes', 20), (int) Settings::get('orders.delivery_max_minutes', 30)),
+            'delivery_time' => 'about '.Settings::formatMinutesRange((int) Settings::get('orders.delivery_min_minutes', 10), (int) Settings::get('orders.delivery_max_minutes', 15)),
             'questions' => [
                 'What first drew you to data science, and when?',
                 'Which modules of the programme interest you most, and why?',

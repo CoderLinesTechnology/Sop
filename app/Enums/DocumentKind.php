@@ -40,15 +40,15 @@ enum DocumentKind: string implements HasLabel
     public function writingFocus(): string
     {
         return match ($this) {
-            self::PersonalStatement => 'Personal narrative; academic motivation; relevant experiences; programme fit; future goals.',
-            self::StatementOfPurpose => 'Academic background; research or academic interests; programme fit; professional goals; relevant experience.',
-            self::MotivationLetter => 'Motivation; fit with the opportunity or programme; personal and professional development; goals. Letter conventions apply.',
-            self::ScholarshipEssay => "Follow the scholarship organisation's exact prompt and selection criteria; evidence of merit, impact and future contribution.",
-            self::GeneralEssay => 'Follow the requested structure and submission requirements exactly.',
-            self::CoverLetter => 'Role or opportunity fit; concrete evidence of relevant skills; concise professional letter conventions.',
-            self::ResearchProposal => 'Research question; context and gap; methodology; feasibility; fit with supervisors and department.',
-            self::Resume => 'Concise, achievement-oriented bullet points; quantified results; reverse-chronological order; clean layout; tailored to the target role.',
-            self::Custom => 'Follow the service writing guidance and the customer prompt exactly.',
+            self::PersonalStatement => 'Motivation, relevant experience, preparation, a coherent direction and fit with the programme, connected as past experience, what it showed, present motivation and future goals. For research degrees, honest evidence of research readiness and a focused intellectual direction.',
+            self::StatementOfPurpose => 'Academic or research interests narrowed to a focused direction (a central area and a specific problem, from the applicant\'s own material); relevant preparation and honestly calibrated research readiness; why this programme and its verified resources; realistic goals.',
+            self::MotivationLetter => 'Why the applicant is applying, evidence of suitability, understanding of the opportunity and what they would contribute. Not the CV in paragraph form. Letter conventions apply.',
+            self::ScholarshipEssay => "The scholarship's exact prompt and selection criteria first; relevant achievements with demonstrated impact (not mere involvement), personal motivation and future objectives aligned with the scholarship's purpose. Omit impressive but unrelated qualifications.",
+            self::GeneralEssay => 'The prompt, a clear thesis, argument, evidence, logical progression and a conclusion. Follow the requested structure and submission requirements exactly. No personal history or institutional fit unless the prompt asks for it.',
+            self::CoverLetter => 'Why this role, concrete evidence of the skills it needs, understanding of the organisation and what the applicant would contribute, in concise professional letter conventions. Not the CV in paragraph form.',
+            self::ResearchProposal => 'A clear problem and rationale, research questions, relevant background and gap, proposed approach and methods, feasibility and potential contribution, with fit with supervisors and department only where verified. Detail appropriate to the assignment.',
+            self::Resume => 'Relevance to the target role, accuracy and concision: achievement-oriented bullet points, quantified only where the material gives figures, in reverse-chronological order with consistent formatting. Do not turn every responsibility into a claimed achievement.',
+            self::Custom => 'Identify the document\'s function and audience first, then follow the service writing guidance and the customer prompt exactly.',
         };
     }
 }

@@ -1,4 +1,4 @@
-@props(['delivery' => '20–30 minutes', 'variant' => 'default'])
+@props(['delivery' => '10–15 minutes', 'variant' => 'default'])
 <ul {{ $attributes->class(['flex flex-wrap gap-x-7 gap-y-4 sm:flex-nowrap sm:gap-x-0 sm:divide-x sm:divide-line']) }}>
     @foreach ([
         ['icon' => 'lock', 'title' => 'Secure Payments', 'text' => '(powered by Paystack)'],

@@ -8,15 +8,29 @@ use App\Domain\Documents\WordCounter;
 
 /**
  * Deterministic style checks whose findings feed the editorial pass:
- * banned phrases (Settings ai.banned_phrases), em-dash overuse, repeated
- * sentence openings, monotonous sentence length, overlong sentences, stock
+ * banned phrases (Settings ai.banned_phrases), em-dash overuse, runs of
+ * semicolons, ellipses, self-praise without evidence, repeated sentence
+ * openings, monotonous sentence length, overlong sentences, stock
  * transitions, exclamation marks and spelling that does not match the
- * required English variant. The goal is authentic, specific writing — not
+ * required English variant. The goal is authentic, specific writing, not
  * gaming AI detectors.
  */
 final class StyleLinter
 {
     private const STOCK_TRANSITIONS = ['furthermore', 'moreover', 'additionally', 'in conclusion', 'overall', 'ultimately', 'in summary', 'to conclude', 'notably', 'importantly'];
+
+    /** Em dashes allowed in a whole document: they should be rare. */
+    private const MAX_DASHES = 1;
+
+    /** Self-descriptions that claim a quality instead of showing it. */
+    private const EMPTY_CLAIMS = [
+        'i am passionate about', "i'm passionate about", 'i am deeply passionate', 'my passion for',
+        'i am a highly motivated', 'highly motivated individual', 'i am highly motivated',
+        'excellent leadership skills', 'strong leadership skills', 'excellent communication skills',
+        'innovative and dedicated', 'dedicated and hardworking', 'hard-working and dedicated',
+        'i am well prepared', 'i am well-prepared', 'i am the ideal candidate', 'i am a perfect fit',
+        'i am a quick learner', 'i am a team player', 'eager to learn', 'willingness to learn',
+    ];
 
     /** british => american pairs; grouped by the variant preference that decides them. */
     private const SPELLINGS = [
@@ -44,6 +58,9 @@ final class StyleLinter
         return [
             ...$this->bannedPhrases($sentences, $bannedPhrases),
             ...$this->dashes($text),
+            ...$this->semicolons($text),
+            ...$this->ellipses($sentences),
+            ...$this->emptyClaims($sentences),
             ...$this->openings($sentences),
             ...$this->rhythm($sentences),
             ...$this->transitions($sentences),
@@ -76,11 +93,51 @@ final class StyleLinter
     {
         $count = substr_count($text, '—') + preg_match_all('/\s--\s/', $text) + preg_match_all('/\s–\s/u', $text);
         $words = WordCounter::words($text);
-        $allowed = max(2, intdiv($words, 300));
+
+        return $count > self::MAX_DASHES
+            ? [$this->finding('dash_overuse', 'medium', "{$count} em dashes in {$words} words (keep at most ".self::MAX_DASHES.' in the whole document); rebuild those sentences with commas, full stops, colons or parentheses rather than swapping the dash.', null)]
+            : [];
+    }
+
+    private function semicolons(string $text): array
+    {
+        $count = substr_count($text, ';');
+        $allowed = max(2, intdiv(WordCounter::words($text), 250));
 
         return $count > $allowed
-            ? [$this->finding('dash_overuse', 'medium', "{$count} em dashes in {$words} words (keep it to {$allowed} or fewer); use commas, full stops or parentheses instead.", null)]
+            ? [$this->finding('semicolon_overuse', 'low', "{$count} semicolons (keep it to {$allowed} or fewer); split long sentences or use full stops instead.", null)]
             : [];
+    }
+
+    /** @param list<string> $sentences */
+    private function ellipses(array $sentences): array
+    {
+        $findings = [];
+        foreach ($sentences as $sentence) {
+            if (str_contains($sentence, '...') || str_contains($sentence, '…')) {
+                $findings[] = $this->finding('ellipsis', 'low', 'Remove the ellipsis; finish the thought in a complete sentence.', $sentence);
+            }
+        }
+
+        return $findings;
+    }
+
+    /** @param list<string> $sentences */
+    private function emptyClaims(array $sentences): array
+    {
+        $findings = [];
+        foreach ($sentences as $sentence) {
+            $lower = mb_strtolower(str_replace('’', "'", $sentence));
+            foreach (self::EMPTY_CLAIMS as $claim) {
+                if (str_contains($lower, $claim)) {
+                    $findings[] = $this->finding('empty_claim', 'medium', "Self-description (\"{$claim}\") instead of evidence: show the quality through something specific the applicant did, or remove the sentence.", $sentence);
+
+                    break;
+                }
+            }
+        }
+
+        return $findings;
     }
 
     /** @param list<string> $sentences */

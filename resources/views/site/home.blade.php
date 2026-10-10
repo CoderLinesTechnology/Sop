@@ -8,7 +8,7 @@
     $resourcesSection = $page?->section('resources') ?? [];
     $faqSection = $page?->section('faq') ?? [];
     $cta = $page?->section('cta') ?? [];
-    $deliveryLabel = ($services->first()['service'] ?? null)?->deliveryLabel() ?? '20–30 minutes';
+    $deliveryLabel = ($services->first()['service'] ?? null)?->deliveryLabel() ?? '10–15 minutes';
 @endphp
 <x-layouts.site :seo="$seo">
     {{-- Hero --}}

@@ -61,6 +61,8 @@ class WritingStage implements Stage
         $result = $this->llm->call($ctx, new LlmCall(
             task: 'refinement',
             variables: $variables,
+            // A targeted revision of an existing draft does not need the first draft's deep reasoning (about a minute faster per round).
+            reasoningEffort: (string) $ctx->config('stages.writing.refinement_reasoning_effort', 'medium'),
             context: PromptInputs::fakeContext($ctx, $draft, ['review' => $variables['review'], 'used_claim_ids' => $ctx->currentDraftClaimIds()]),
             writingSamples: PromptInputs::writingSamples($ctx),
         ));

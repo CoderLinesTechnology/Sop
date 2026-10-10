@@ -12,7 +12,7 @@ use App\Models\InformationRequest;
  * so the pipeline can continue from analysis instead of reading every
  * upload again: answering costs one short analysis call, not a new ingestion.
  */
-final class FollowUpFacts
+class FollowUpFacts
 {
     private const MAX_QUOTE = 1500;
 

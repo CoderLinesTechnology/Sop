@@ -188,7 +188,7 @@ class ContentSeeder extends Seeder
                 'title' => 'How It Works',
                 'kind' => 'landing',
                 'seo_title' => 'How Statementra Works: Research, Writing and Delivery',
-                'seo_description' => 'Tell us what you\'re applying for and pay securely. We research, write, fact-check and format your document, then email it to you in about 20–30 minutes.',
+                'seo_description' => 'Tell us what you\'re applying for and pay securely. We research, write, fact-check and format your document, then email it to you in about 10–15 minutes.',
                 'sections' => [
                     'hero' => [
                         'eyebrow' => 'How it works',
@@ -280,7 +280,7 @@ MD,
     private function faqs(): array
     {
         return [
-            ['home', 'How long does it take to receive my document?', 'Most documents are delivered within 20–30 minutes of payment. Occasionally an application needs extra research or a quick question to you; if so, we email you and keep you updated. You never need to keep the website open.'],
+            ['home', 'How long does it take to receive my document?', 'Most documents are delivered within 10–15 minutes of payment. Occasionally an application needs extra research or a quick question to you; if so, we email you and keep you updated. You never need to keep the website open.'],
             ['home', 'What file formats will I receive?', 'You receive two files by email: a polished, submission-ready PDF and an editable Microsoft Word (.docx) document with exactly the same content. You can also download both from your secure order page.'],
             ['home', 'Do you offer revisions?', 'Yes. Every service includes a revision within the revision period shown at checkout. Just use the link in your delivery email and tell us what you would like to change.'],
             ['home', 'Is my information kept confidential?', 'Yes. Your information and documents are encrypted, stored privately and never shared publicly. We only use them to prepare your document, and we delete them after a retention period. See our Privacy Policy for details.'],

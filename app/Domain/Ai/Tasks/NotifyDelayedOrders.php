@@ -54,7 +54,7 @@ final class NotifyDelayedOrders
             ->get();
 
         foreach ($orders as $order) {
-            $maxMinutes = (int) (data_get($order->service_snapshot, 'delivery_max_minutes') ?: ($order->service?->deliveryWindow()[1] ?? 30));
+            $maxMinutes = (int) (data_get($order->service_snapshot, 'delivery_max_minutes') ?: ($order->service?->deliveryWindow()[1] ?? 15));
             $minutes = (int) floor($this->processingSince($order)->diffInMinutes(now(), true));
 
             if ($minutes < $maxMinutes + self::GRACE_MINUTES) {

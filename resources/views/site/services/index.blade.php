@@ -4,7 +4,7 @@
     $why = $page?->section('why') ?? [];
     $count = $services->count();
     $remainder = $count % 3;
-    $deliveryLabel = ($services->first()['service'] ?? null)?->deliveryLabel() ?? '20–30 minutes';
+    $deliveryLabel = ($services->first()['service'] ?? null)?->deliveryLabel() ?? '10–15 minutes';
 @endphp
 <x-layouts.site :seo="$seo">
     {{-- Hero --}}

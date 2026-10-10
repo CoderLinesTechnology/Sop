@@ -1,9 +1,13 @@
 <?php
 
+use App\Domain\Ai\FollowUpFacts;
 use App\Domain\Ai\PipelineDispatcher;
+use App\Domain\Orders\InformationRequestService;
 use App\Domain\Orders\OrderAccess;
 use App\Enums\OrderStatus;
+use App\Models\AiJobStep;
 use App\Models\InformationRequest;
+use Mockery\MockInterface;
 use Tests\Feature\Ai\Support\PipelineFixtures;
 
 uses(PipelineFixtures::class);
@@ -61,4 +65,66 @@ it('offers answer starters under each follow-up question', function () {
         ->assertOk()
         ->assertSee('data-starter="For example, …"', false)
         ->assertSee('data-starter-target="f-answers-q1"', false);
+});
+
+it('suggests answers drafted from the customer\'s own details under each question', function () {
+    [$order, $request] = orderWaitingForAnswer($this);
+
+    expect($request->questions[0]['suggestions'])->not->toBeEmpty();
+
+    $this->get(route('orders.show', $order->public_id))
+        ->assertOk()
+        ->assertSee('Suggested answers from your details')
+        ->assertSee('data-starter="'.e($request->questions[0]['suggestions'][0]).'"', false)
+        ->assertSee('data-draft-key="followup:'.$order->public_id.':', false);
+});
+
+it('keeps the saved answer and shows success when restarting the work fails afterwards', function () {
+    [$order, $request] = orderWaitingForAnswer($this);
+    $this->mock(PipelineDispatcher::class, fn (MockInterface $mock) => $mock->shouldReceive('resume')->andThrow(new RuntimeException('process start failed')));
+
+    $this->post(route('orders.information', $order->public_id), ['answers' => ['q1' => 'I studied Electrical Engineering at KNUST.']])
+        ->assertRedirect(route('orders.show', $order->public_id))
+        ->assertSessionHas('status');
+
+    expect($request->fresh()->status)->toBe('answered');
+});
+
+it('keeps what the customer typed, with a gentle message, when the answer cannot be saved', function () {
+    [$order] = orderWaitingForAnswer($this);
+    $this->mock(InformationRequestService::class, fn (MockInterface $mock) => $mock->shouldReceive('answer')->andThrow(new RuntimeException('database unavailable')));
+
+    $this->from(route('orders.show', $order->public_id))
+        ->post(route('orders.information', $order->public_id), ['answers' => ['q1' => 'My project on solar pumps.']])
+        ->assertRedirect(route('orders.show', $order->public_id))
+        ->assertSessionHasErrors('answers')
+        ->assertSessionHasInput('answers.q1', 'My project on solar pumps.');
+});
+
+it('still saves the answer and re-reads the material when it cannot be added to the profile', function () {
+    [$order, $request] = orderWaitingForAnswer($this);
+    $job = $order->latestAiJob;
+    $this->mock(FollowUpFacts::class, fn (MockInterface $mock) => $mock->shouldReceive('merge')->andThrow(new RuntimeException('profile locked')));
+
+    $this->post(route('orders.information', $order->public_id), ['answers' => ['q1' => 'I studied Electrical Engineering at KNUST.']])
+        ->assertRedirect(route('orders.show', $order->public_id));
+
+    expect($request->fresh()->status)->toBe('answered')
+        ->and(AiJobStep::query()->where('ai_job_id', $job->id)->where('stage', 'ingestion')->count())->toBe(2);
+});
+
+it('explains instead of showing "session expired" when the form was left open too long', function () {
+    [$order] = orderWaitingForAnswer($this);
+
+    // Outside the testing environment the CSRF check runs, as it does in production.
+    app()->instance('env', 'local');
+    try {
+        $response = $this->post(route('orders.information', $order->public_id), ['answers' => ['q1' => 'An answer'], '_token' => 'expired']);
+    } finally {
+        app()->instance('env', 'testing');
+    }
+
+    $response->assertStatus(419)
+        ->assertSee('saved on this device, but not sent yet')
+        ->assertSee(route('orders.show', $order->public_id), false);
 });

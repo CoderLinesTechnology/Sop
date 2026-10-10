@@ -11,6 +11,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -48,6 +49,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*', 'webhooks/*') || $request->expectsJson(),
         );
+
+        // A follow-up form left open until the session expired: explain and keep the answers (saved in the browser).
+        $exceptions->render(function (HttpException $e, Request $request) {
+            if ($e->getStatusCode() === 419 && $request->routeIs('orders.information')) {
+                return response()->view('orders.answers-not-sent', ['order' => (string) $request->route('order')], 419);
+            }
+        });
 
         // Never leak internals to customers: technical details go to logs and error tracking only.
         $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'email_verification_code']);

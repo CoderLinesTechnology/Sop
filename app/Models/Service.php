@@ -97,8 +97,8 @@ class Service extends Model
     /** @return array{0:int,1:int} */
     public function deliveryWindow(): array
     {
-        $min = $this->delivery_min_minutes ?: (int) Settings::get('orders.delivery_min_minutes', 20);
-        $max = $this->delivery_max_minutes ?: (int) Settings::get('orders.delivery_max_minutes', 30);
+        $min = $this->delivery_min_minutes ?: (int) Settings::get('orders.delivery_min_minutes', 10);
+        $max = $this->delivery_max_minutes ?: (int) Settings::get('orders.delivery_max_minutes', 15);
 
         return [min($min, $max), max($min, $max)];
     }

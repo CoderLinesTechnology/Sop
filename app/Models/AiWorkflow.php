@@ -62,7 +62,12 @@ class AiWorkflow extends Model
                 'enabled' => true,
                 'model' => in_array($stage, [PipelineStage::Writing, PipelineStage::Editorial], true) ? $writer : $model,
                 'prompt_key' => $stage->value,
-                'reasoning_effort' => in_array($stage, [PipelineStage::Writing, PipelineStage::Strategy, PipelineStage::QualityReview], true) ? 'high' : 'medium',
+                // Deep reasoning only for the first draft; extraction is mechanical and the rest is well served by medium.
+                'reasoning_effort' => match ($stage) {
+                    PipelineStage::Writing => 'high',
+                    PipelineStage::Ingestion => 'low',
+                    default => 'medium',
+                },
                 'max_output_tokens' => 16000,
             ];
         }
@@ -70,10 +75,10 @@ class AiWorkflow extends Model
         return [
             'stages' => $stages,
             'research' => [
-                'max_search_calls' => 12,
+                'max_search_calls' => 6,
                 'official_first' => true,
                 'allow_secondary_sources' => true,
-                'search_context_size' => 'medium',
+                'search_context_size' => 'low',
                 'verify_quotes' => true,
             ],
             'quality' => [
