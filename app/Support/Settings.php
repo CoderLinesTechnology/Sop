@@ -31,7 +31,7 @@ final class Settings
             'general.logo_path' => null,
             'general.contact_email' => 'hello@statementra.com',
             'general.support_email' => 'support@statementra.com',
-            'general.currency' => 'USD',
+            'general.currency' => 'GHS',
             'general.timezone' => 'UTC',
             'general.social_linkedin' => null,
             'general.social_x' => null,
@@ -170,7 +170,7 @@ final class Settings
 
     public static function currency(): string
     {
-        return strtoupper((string) self::get('general.currency', 'USD'));
+        return strtoupper((string) self::get('general.currency', 'GHS'));
     }
 
     /** @return list<string> */

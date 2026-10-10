@@ -29,7 +29,7 @@ class ServiceCatalogSeeder extends Seeder
 
                 $service = Service::query()->create($definition + [
                     'display_order' => $order,
-                    'currency' => 'USD',
+                    'currency' => 'GHS',
                     'is_active' => true,
                     'revisions_included' => 1,
                     'revision_window_days' => 14,

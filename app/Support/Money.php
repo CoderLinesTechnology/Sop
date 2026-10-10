@@ -20,7 +20,7 @@ final class Money
     public static function format(?int $minor, ?string $currency, bool $alwaysDecimals = false): string
     {
         $minor ??= 0;
-        $currency = strtoupper($currency ?: 'USD');
+        $currency = strtoupper($currency ?: 'GHS');
         $meta = self::CURRENCIES[$currency] ?? ['symbol' => $currency.' ', 'space' => false];
 
         $negative = $minor < 0;

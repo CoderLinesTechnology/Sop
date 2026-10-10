@@ -21,6 +21,7 @@ use App\Models\Feedback;
 use App\Models\Order;
 use App\Models\Revision;
 use App\Models\Service;
+use App\Support\Settings;
 use Livewire\Livewire;
 use Tests\Feature\Admin\Operations\Fixtures;
 
@@ -74,6 +75,7 @@ it('renders the dashboard for every administrator role', function (AdminRole $ro
 it('renders every dashboard widget with data', function () {
     actingAsAdmin(AdminRole::SuperAdmin);
     seedBusiness();
+    Settings::set('general.currency', 'USD'); // revenue is reported in the site currency; the fixtures are USD
 
     Livewire::test(SalesOverview::class, ['pageFilters' => ['range' => 30]])
         ->assertOk()
