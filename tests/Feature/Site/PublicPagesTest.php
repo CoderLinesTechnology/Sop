@@ -37,3 +37,20 @@ it('renders every service, article and category page', function () {
         }
     }
 });
+
+it('shows "Find my order" in the desktop and the mobile menu, opening the find-my-order page', function () {
+    $this->seed(ContentSeeder::class);
+    $menus = fn (string $html, string $label) => [
+        preg_match('/<nav aria-label="'.$label.'".*?<\/nav>/s', $html, $m) ? $m[0] : '',
+    ][0];
+
+    $home = $this->get('/')->assertOk()->getContent();
+    foreach (['Main', 'Mobile'] as $menu) {
+        expect($menus($home, $menu))->toContain('href="'.route('orders.lookup').'"')->toContain('Find my order')
+            ->not->toContain(route('account.login'));
+    }
+
+    // Highlighted as the current page on the find-my-order page itself.
+    expect($menus($this->get(route('orders.lookup'))->assertOk()->getContent(), 'Main'))
+        ->toMatch('/href="'.preg_quote(route('orders.lookup'), '/').'"[^>]*aria-current="page"|aria-current="page"[^>]*>Find my order/s');
+});

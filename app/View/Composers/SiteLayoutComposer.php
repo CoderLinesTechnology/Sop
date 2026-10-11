@@ -37,6 +37,7 @@ class SiteLayoutComposer
                 ['label' => 'Resources', 'url' => route('resources.index'), 'active' => request()->routeIs('resources.*')],
                 ['label' => 'About', 'url' => route('pages.show', 'about'), 'active' => request()->is('about')],
                 ['label' => 'FAQ', 'url' => route('pages.faq'), 'active' => request()->routeIs('pages.faq')],
+                ['label' => 'Find my order', 'url' => route('orders.lookup'), 'active' => request()->routeIs('orders.lookup*')],
             ],
         ]);
     }

@@ -38,7 +38,6 @@
                     <a href="{{ $item['url'] }}" @class(['rounded-md px-2 py-3 text-base font-medium', 'text-brand-700' => $item['active'], 'text-ink' => ! $item['active']])
                        @if ($item['active']) aria-current="page" @endif>{{ $item['label'] }}</a>
                 @endforeach
-                <a href="{{ route('account.login') }}" class="rounded-md px-2 py-3 text-base font-medium text-ink">Find my order</a>
                 <a href="{{ route('order.start') }}" class="btn-primary mt-3 w-full">Get Started <x-icon name="arrow-right" class="size-4" /></a>
             </nav>
         </div>
