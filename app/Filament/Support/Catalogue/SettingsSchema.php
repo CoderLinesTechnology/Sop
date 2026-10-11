@@ -41,7 +41,7 @@ final class SettingsSchema
         'orders.retention_days',
         'payments.allow_free_orders',
         'referrals.enabled', 'referrals.cookie_days', 'referrals.hold_days', 'referrals.minimum_payout', 'referrals.applications_open',
-        'referrals.rejected_application_days',
+        'referrals.rejected_application_days', 'referrals.approved_application_days', 'referrals.financial_record_years',
         'ai.daily_budget_usd', 'ai.banned_phrases',
         'email.from_name', 'email.from_address', 'email.reply_to', 'email.admin_notification_emails', 'email.attach_documents',
         'email.document_link_days',

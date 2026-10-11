@@ -114,7 +114,8 @@ final class ReferrerService
      * the commission ledger, payout records and order attribution (accounting
      * records). Refused while a payout request is open (decide it first).
      */
-    public function erase(Referrer $referrer, AdminUser $admin): void
+    /** Erase a referrer's personal data (an administrator's request, or retention when $admin is null). */
+    public function erase(Referrer $referrer, ?AdminUser $admin): void
     {
         if ($referrer->isErased()) {
             return;
@@ -141,7 +142,7 @@ final class ReferrerService
             ])->save();
         });
 
-        Audit::log('referrer.erased', $referrer, meta: ['fields' => ['name', 'email', 'phone', 'notes', 'payment_details']], admin: $admin);
+        Audit::log('referrer.erased', $referrer, meta: ['fields' => ['name', 'email', 'phone', 'notes', 'payment_details'], 'source' => $admin ? 'administrator' : 'retention'], admin: $admin);
     }
 
     private function mail(Referrer $referrer): bool

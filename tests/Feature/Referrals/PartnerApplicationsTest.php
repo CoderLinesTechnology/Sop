@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Referrals\PartnerApplications;
 use App\Domain\Referrals\Tasks\ReferralHousekeeping;
 use App\Enums\AdminRole;
 use App\Enums\Permission;
@@ -16,6 +17,7 @@ use App\Support\Settings;
 use Database\Seeders\ContentSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -172,6 +174,40 @@ it('purges unconfirmed applications after 7 days and rejected ones after the ret
     app(ReferralHousekeeping::class)();
     expect($rejected->fresh())->toBeNull()
         ->and($waiting->fresh())->not->toBeNull();
+});
+
+it('deletes approved applications a year after approval, keeping the partner they created', function () {
+    $admin = actingAsAdmin(AdminRole::Finance);
+    $application = submittedApplication();
+    $referrer = app(PartnerApplications::class)->approve($application, 'ABENA', 1000, $admin);
+
+    $this->travel(364)->days();
+    app(ReferralHousekeeping::class)();
+    expect($application->fresh())->not->toBeNull();
+
+    $this->travel(2)->days();
+    app(ReferralHousekeeping::class)();
+    expect($application->fresh())->toBeNull()
+        ->and($referrer->fresh())->not->toBeNull();
+});
+
+it('publishes the partner terms, links them from the application form and lists the partner pages in the sitemap', function () {
+    $this->seed(ContentSeeder::class);
+
+    $this->get(route('pages.show', 'partner-terms'))->assertOk()
+        ->assertSee('Partner Programme Terms')
+        ->assertSee('pending for 14 days', false)
+        ->assertSee('GH₵100', false);
+    $this->get(route('partners.apply'))->assertOk()->assertSee(route('pages.show', 'partner-terms'), false);
+    $this->get(route('pages.show', 'cookie-policy'))->assertOk()->assertSee('st_ref (optional)', false);
+    $this->get(route('pages.show', 'privacy-policy'))->assertOk()->assertSee('Referrals and our partner programme', false);
+
+    $sitemap = $this->get(route('sitemap'))->assertOk()->getContent();
+    expect($sitemap)->toContain(route('partners.apply'))->toContain(route('pages.show', 'partner-terms'));
+
+    Settings::set('referrals.applications_open', false);
+    Cache::flush();
+    expect($this->get(route('sitemap'))->getContent())->not->toContain(route('partners.apply'));
 });
 
 it('lets referral managers approve an application, creating the referrer and emailing both links', function () {

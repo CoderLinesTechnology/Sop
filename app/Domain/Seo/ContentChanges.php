@@ -96,6 +96,7 @@ final class ContentChanges
             'how-it-works' => route('pages.how-it-works'),
             'faq' => route('pages.faq'),
             'contact' => route('contact.show'),
+            'become-a-partner' => route('partners.apply'),
             default => in_array($page->slug, PageController::STANDARD_PAGES, true) ? route('pages.show', $page->slug) : null,
         }]));
     }

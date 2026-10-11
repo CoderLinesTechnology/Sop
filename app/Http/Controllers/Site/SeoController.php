@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Site;
 
 use App\Domain\Catalogue\Catalogue;
+use App\Domain\Referrals\ReferralProgramme;
 use App\Domain\Seo\IndexNow;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
@@ -65,6 +66,10 @@ class SeoController extends Controller
                 ['loc' => route('pages.faq'), 'lastmod' => $lastmod($page('faq'), $faqUpdated ? Carbon::parse($faqUpdated) : null), 'priority' => '0.6', 'changefreq' => 'monthly'],
                 ['loc' => route('contact.show'), 'lastmod' => $lastmod($page('contact')), 'priority' => '0.4', 'changefreq' => 'yearly'],
             ];
+
+            if ($pages->has('become-a-partner') && ReferralProgramme::applicationsOpen()) {
+                $urls[] = ['loc' => route('partners.apply'), 'lastmod' => $lastmod($page('become-a-partner')), 'priority' => '0.5', 'changefreq' => 'monthly'];
+            }
 
             foreach (PageController::STANDARD_PAGES as $slug) {
                 if ($pages->has($slug)) {

@@ -116,7 +116,7 @@
                             <label class="flex items-start gap-3 text-[0.9rem] text-ink">
                                 <input type="checkbox" name="consent" value="1" @checked(old('consent')) required
                                        class="mt-0.5 size-5 rounded border-line-strong text-brand-700 focus:ring-brand-600" @error('consent') aria-invalid="true" @enderror>
-                                <span>I have read the <a href="{{ route('pages.show', 'privacy-policy') }}" class="link">privacy notice</a> and agree to be contacted about my application.</span>
+                                <span>I have read the <a href="{{ route('pages.show', 'partner-terms') }}" class="link">partner terms</a> and the <a href="{{ route('pages.show', 'privacy-policy') }}" class="link">privacy notice</a>, and agree to be contacted about my application.</span>
                             </label>
                             @error('consent')<p class="field-error" role="alert">{{ $message }}</p>@enderror
                         </div>

@@ -59,6 +59,8 @@ final class Settings
             'referrals.minimum_payout' => 10000,
             'referrals.applications_open' => true,
             'referrals.rejected_application_days' => 180,
+            'referrals.approved_application_days' => 365,
+            'referrals.financial_record_years' => 6,
 
             'ai.daily_budget_usd' => 250,
             'ai.banned_phrases' => [

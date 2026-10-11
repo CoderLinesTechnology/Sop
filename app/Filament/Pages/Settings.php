@@ -317,6 +317,26 @@ class Settings extends Page
                             ->required()
                             ->suffix('days')
                             ->helperText('Unconfirmed applications are deleted after 7 days.'),
+                        TextInput::make('referrals.approved_application_days')
+                            ->label('Delete approved applications after')
+                            ->integer()
+                            ->minValue(30)
+                            ->maxValue(3650)
+                            ->required()
+                            ->suffix('days')
+                            ->helperText('The partner record keeps what the programme needs.'),
+                    ])
+                    ->columns(2),
+                Section::make('Partner records')
+                    ->schema([
+                        TextInput::make('referrals.financial_record_years')
+                            ->label('Keep payout and partner records for')
+                            ->integer()
+                            ->minValue(1)
+                            ->maxValue(20)
+                            ->required()
+                            ->suffix('years')
+                            ->helperText('Accounting and tax records. After this, payouts lose the payment details they were sent to, and a partner deactivated this long ago with no activity has their personal data erased. Amounts stay, without personal data.'),
                     ])
                     ->columns(2),
             ]);

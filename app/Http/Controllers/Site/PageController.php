@@ -13,7 +13,7 @@ use League\CommonMark\Extension\Table\TableExtension;
 
 class PageController extends Controller
 {
-    public const STANDARD_PAGES = ['about', 'privacy-policy', 'terms', 'refund-policy', 'cookie-policy'];
+    public const STANDARD_PAGES = ['about', 'privacy-policy', 'terms', 'refund-policy', 'cookie-policy', 'partner-terms'];
 
     public function show(Catalogue $catalogue, string $page): View
     {

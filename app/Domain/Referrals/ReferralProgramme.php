@@ -70,6 +70,18 @@ final class ReferralProgramme
         return max(7, min(3650, (int) Settings::get('referrals.rejected_application_days', 180)));
     }
 
+    /** Days an approved application is kept (the partner record holds what the programme needs). */
+    public static function approvedApplicationDays(): int
+    {
+        return max(30, min(3650, (int) Settings::get('referrals.approved_application_days', 365)));
+    }
+
+    /** Years partner money records keep personal data: after a payout, and after a partnership ends (accounting and tax). */
+    public static function financialRecordYears(): int
+    {
+        return max(1, min(20, (int) Settings::get('referrals.financial_record_years', 6)));
+    }
+
     /** A referral code in its stored form, or null when it cannot be one. */
     public static function normalize(mixed $code): ?string
     {

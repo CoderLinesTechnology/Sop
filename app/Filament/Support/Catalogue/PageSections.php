@@ -22,7 +22,7 @@ final class PageSections
     /** Pages the site depends on: their slugs cannot change and they cannot be deleted. */
     public const SYSTEM_PAGES = [
         'home', 'services', 'resources', 'how-it-works', 'about', 'faq', 'contact',
-        'privacy-policy', 'terms', 'refund-policy', 'cookie-policy', 'become-a-partner',
+        'privacy-policy', 'terms', 'refund-policy', 'cookie-policy', 'become-a-partner', 'partner-terms',
     ];
 
     public const KINDS = [

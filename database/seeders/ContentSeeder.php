@@ -284,6 +284,13 @@ MD,
                 'seo_description' => 'When Statementra orders can be refunded, how to ask for a refund and how refunds are paid back to you through Paystack.',
                 'body' => $this->refundPolicy(),
             ],
+            'partner-terms' => [
+                'title' => 'Partner Programme Terms',
+                'kind' => 'legal',
+                'seo_title' => 'Partner Programme Terms',
+                'seo_description' => 'The terms of the Statementra partner programme: joining, referrals, commission, the holding period, payouts, tax and how partners may promote Statementra.',
+                'body' => $this->partnerTerms(),
+            ],
             'cookie-policy' => [
                 'title' => 'Cookie Policy',
                 'kind' => 'legal',
@@ -332,6 +339,8 @@ Statementra ("we", "us") provides personalized application-writing services. Thi
 - **Payment information:** payments are processed by Paystack. We receive confirmation of payment, the amount and a transaction reference. We do not receive or store your full card details.
 - **Technical information:** basic request information (such as IP address and browser type) used for security, fraud prevention and rate limiting. Our analytics are cookieless and do not store raw IP addresses.
 - **Communications:** messages you send to our support team and feedback you choose to give.
+- **Referral information:** if you reach us through a partner's referral link, or type a partner's code when you pay, we record which partner referred your order. Partners only see that an order was placed, its amount and their commission, never your name, contact details, order reference or documents.
+- **Partner programme information:** if you apply to become a partner, your name, email address, phone number, city and country, and your answers on the application. Once you are approved, the mobile money or bank details you give us for payouts, and a record of your referrals, commission and payouts.
 
 ## How we use your information
 
@@ -339,10 +348,17 @@ Statementra ("we", "us") provides personalized application-writing services. Thi
 - To process payments and prevent fraud and abuse.
 - To send transactional emails about your order. We only send marketing emails if you subscribe to our newsletter.
 - To improve our service using aggregated quality measures and the feedback you provide.
+- To credit the partner who referred you, and to run our partner programme: reviewing applications, calculating commission and paying partners.
 
 ## AI processing and service providers
 
 Your documents are prepared with the help of AI models provided by OpenAI. We send only the information needed to prepare your document, we instruct the models to treat your documents as data, and we configure the service not to retain your content for training. We also use trusted providers for payments (Paystack), email delivery, hosting and file storage. They process data only on our instructions.
+
+## Referrals and our partner programme
+
+When you follow a partner's referral link, we remember the referral for your current visit so that the partner is credited if you order. We do this in our legitimate interest in running the programme, and it never changes your price. We remember a referral for longer (30 days) only if you agree, using the cookie described in our [Cookie Policy](/cookie-policy), and never when your browser sends a Global Privacy Control signal. You can also type a partner's code yourself when you pay.
+
+We use partners' information to consider their application, to run the partnership, to pay them and to meet our accounting and tax obligations. Payout details are encrypted, are used only after the partner has confirmed them from their email, and can be seen only by the staff who handle payouts, with each view logged. Partner payouts are sent by mobile money or bank transfer.
 
 ## How we protect your information
 
@@ -351,6 +367,8 @@ Uploaded files and generated documents are encrypted and kept in private storage
 ## Retention
 
 We keep your uploaded documents and generated documents for {{retention_days}} days after delivery so that you can download them and request revisions, after which they are deleted. Order and payment records are kept as long as required for accounting and legal purposes.
+
+Partner programme records: applications that are never confirmed are deleted after 7 days, rejected applications after 180 days and approved applications after one year. Commission and payout records are kept for six years for accounting and tax purposes. After that, payouts no longer show the account they were paid to, and a partner whose partnership ended six years earlier has their personal information erased. Referral visit counts contain no personal information.
 
 ## Your rights
 
@@ -438,20 +456,93 @@ Email {{support_email}} with your order reference and the reason for your reques
 MD;
     }
 
+    private function partnerTerms(): string
+    {
+        return <<<'MD'
+_Last updated: {{date}}._
+
+These terms apply to the {{site_name}} partner programme. By applying to the programme, you agree to them. "We" means {{site_name}}; "you" means the partner.
+
+## Joining
+
+- Apply on our [Become a partner](/become-a-partner) page and confirm your email address. We review every application and may decline one without giving a reason.
+- You must be at least 18 years old and apply in your own name. Each person may have one partner account.
+- When we approve you, we email you your referral link and code, and a private link to your partner dashboard.
+
+## Your link, code and referrals
+
+- Share your link (any page of our website with `?ref=` and your code at the end) or your code. Customers can also type your code when they pay.
+- An order is credited to you when the customer followed your link during the visit in which they ordered, followed it in the previous 30 days and agreed to be remembered, or typed your code when paying. If a customer follows several partners' links, the last one counts; a code typed at payment takes priority.
+- Referral codes never change the customer's price.
+- No commission is earned on orders you place or pay for yourself, or on orders that use your email address.
+
+## Commission
+
+- Your commission rate is agreed with you when you are approved and is shown on your dashboard. A new rate applies only to payments made after we tell you about it.
+- Commission is a percentage of what the customer actually pays for a referred order, after any discount, including paid revisions of that order. It is calculated before payment-provider fees and rounded down to the nearest pesewa.
+- If an order is refunded, in full or in part, the commission on the refunded amount is deducted from your balance, even if it had already become available. If your balance falls below zero, the difference is taken from future commission.
+
+## Holding period and payouts
+
+- New commission is pending for 14 days (our refund and revision window), then becomes available.
+- When your available balance reaches GH₵100, you can request a payout from your dashboard. A request covers your whole available balance; you can also leave your balance to grow.
+- Payouts are sent to the mobile money or bank account in your name that you have added on your dashboard and confirmed from your email. We may hold a payout while we check a recent change of payment details.
+- We aim to pay within 7 working days of your request. We pay the cost of sending the payout; any charge your bank or network makes for receiving it is yours.
+- We may reject a request and tell you why, for example when payment details cannot be verified. The amount then returns to your available balance.
+
+## Tax
+
+You are responsible for declaring your commission and paying any tax on it. Where the law requires us to deduct tax from a payment to you, we will deduct it and give you a record of the deduction.
+
+## How you may promote us
+
+- Be honest. Never promise admission, a scholarship, a job, a grade or any other outcome, and never say that we guarantee results.
+- Do not present yourself as {{site_name}} or as our staff, and do not use our name or logo in a way that suggests you are us.
+- Do not send unsolicited bulk messages or add people to groups without their permission. Follow the rules of each platform you use and the law.
+- Do not bid on our name in search adverts, place orders that are not genuine, or publish your code on coupon or cashback websites without our written permission.
+- Do not send us other people's personal information.
+
+## Your dashboard link
+
+Keep your dashboard link private: anyone who has it can see your dashboard. If you lose it, request it again on our [partner page](/partner). We can also replace it for you.
+
+## Ending the partnership
+
+- You can leave the programme at any time by telling us. We can end the partnership at any time with notice, or immediately if you break these terms.
+- When the partnership ends, we pay your available balance, even if it is below the minimum, once any pending commission has passed its holding period. Commission is not earned on payments made after the partnership ends.
+- We may withhold or reverse commission connected to fraud, self-referral or a breach of these terms.
+
+## Your information
+
+We handle your information as described in our [Privacy Policy](/privacy-policy).
+
+## Changes to these terms
+
+We may change these terms. We will email you at least 14 days before a change takes effect. If you stay in the programme after that, the new terms apply.
+
+## Law and contact
+
+These terms are governed by the laws of Ghana. Questions about the programme? Email {{support_email}}.
+MD;
+    }
+
     private function cookiePolicy(): string
     {
         return <<<'MD'
 _Last updated: {{date}}._
 
-Statementra uses only the cookies needed to run the website securely. We do not use advertising or third-party tracking cookies, and our analytics are cookieless.
+Statementra uses the cookies needed to run the website securely, and one optional cookie that is set only if you agree. We do not use advertising or third-party tracking cookies, and our analytics are cookieless.
 
 | Cookie | Purpose | Duration |
 | --- | --- | --- |
 | Session cookie | Keeps your session (for example, your place in checkout) | Until you close the browser or after inactivity |
 | XSRF-TOKEN | Protects forms against cross-site request forgery | Session |
 | st_checkout | Links the files you upload to your application before payment | Up to 3 days |
+| st_ref (optional) | Remembers the partner who referred you, so that they are credited if you order on a later visit. Set only if you choose "Remember" when we ask | 30 days |
 
-Because these cookies are strictly necessary, they do not require consent. You can block cookies in your browser, but checkout may not work without them.
+The first three cookies are strictly necessary, so they do not require consent. You can block cookies in your browser, but checkout may not work without them.
+
+**The referral cookie.** If you arrive through a partner's referral link, we ask whether to remember the referral for 30 days. If you choose "No thanks", or your browser sends a Global Privacy Control signal, we remember it only for your current visit and set no cookie. To withdraw your consent, delete the st_ref cookie in your browser settings; the partner will then not be credited for later orders.
 MD;
     }
 }

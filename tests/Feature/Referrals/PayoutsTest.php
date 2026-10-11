@@ -6,6 +6,7 @@ use App\Domain\Referrals\ReferralBalances;
 use App\Domain\Referrals\ReferralCommissions;
 use App\Domain\Referrals\ReferralPayouts;
 use App\Domain\Referrals\ReferralRefused;
+use App\Domain\Referrals\Tasks\ReferralHousekeeping;
 use App\Enums\AdminRole;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
@@ -248,4 +249,46 @@ it('shows balances and payout history on the dashboard without customer data', f
         ->not->toContain('024 123 4567')
         ->not->toContain('Efua Hidden')->not->toContain('efua.hidden@example.com')
         ->not->toContain($order->reference)->not->toContain($order->public_id);
+});
+
+it('keeps payout and partner records for the record period, then removes the personal data and keeps the amounts', function () {
+    $admin = AdminUser::factory()->create();
+    $ended = payoutReferrer();
+    earn($ended, 200000);
+    $old = app(ReferralPayouts::class)->request($ended);
+    app(ReferralPayouts::class)->markPaid($old, 'MOMO-OLD', $admin);
+    $ended->forceFill(['is_active' => false])->save();
+
+    $active = payoutReferrer();
+    earn($active, 200000);
+    $open = app(ReferralPayouts::class)->request($active);
+
+    // Five years on: nothing is removed yet.
+    $this->travel(5)->years();
+    app(ReferralHousekeeping::class)();
+    expect($old->fresh()->payment_details)->not->toBeNull()
+        ->and($ended->fresh()->isErased())->toBeFalse();
+
+    // Past six years: the old payout loses where it was paid; the partner who left is erased; amounts stay.
+    $this->travel(1)->years();
+    $this->travel(1)->days();
+    app(ReferralHousekeeping::class)();
+
+    expect($old->fresh()->payment_details)->toBeNull()
+        ->and($old->fresh()->amount)->toBe(20000)
+        ->and($ended->fresh()->isErased())->toBeTrue()
+        ->and($ended->fresh()->email)->toBeNull()
+        ->and($ended->commissions()->sum('amount'))->toBe(20000)
+        ->and(AuditLog::query()->where('action', 'referrer.erased')->sole()->meta['source'])->toBe('retention')
+        // An active partner and an open request are never touched.
+        ->and($active->fresh()->isErased())->toBeFalse()
+        ->and($open->fresh()->payment_details)->not->toBeNull();
+
+    // A shorter period set by the administrator applies too.
+    Settings::set('referrals.financial_record_years', 1);
+    $recent = payoutReferrer(['is_active' => false]);
+    $this->travel(2)->years();
+    app(ReferralHousekeeping::class)();
+    expect($recent->fresh()->isErased())->toBeTrue()
+        ->and($active->fresh()->isErased())->toBeFalse();
 });

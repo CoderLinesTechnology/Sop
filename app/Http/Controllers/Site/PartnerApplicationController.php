@@ -77,7 +77,7 @@ class PartnerApplicationController extends Controller
             'links.*.url' => 'Enter each link as a full web address starting with https://.',
             'motivation.min' => 'Tell us a little more (at least 20 characters).',
             'preferred_code.regex' => 'Use only letters, numbers, dashes and underscores.',
-            'consent.accepted' => 'Please confirm you have read the privacy notice and agree to be contacted about your application.',
+            'consent.accepted' => 'Please confirm you have read the partner terms and the privacy notice, and agree to be contacted about your application.',
         ], [
             'full_name' => 'full name',
             'audience_size' => 'audience size',
