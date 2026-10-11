@@ -91,7 +91,7 @@ class DocumentConfigurationSeeder extends Seeder
             [
                 'name' => 'Motivation letter (European)',
                 'slug' => 'motivation-letter-european',
-                'description' => 'Letter layout for motivation and cover letters: date line, subject line, salutation, closing and signature; Calibri 11 pt, 1.15 spacing.',
+                'description' => 'Letter layout for motivation and cover letters: starts like a real letter (date line, then the salutation; no document title), closing and signature; Calibri 11 pt, 1.15 spacing.',
                 'is_default' => false,
                 'priority' => 10,
                 'match_rules' => ['document_kinds' => ['motivation_letter', 'cover_letter']],
@@ -105,6 +105,8 @@ class DocumentConfigurationSeeder extends Seeder
                 'title_font_size' => 11,
                 'title_align' => 'left',
                 'heading_font_size' => 11,
+                // A letter starts with the date and the salutation: no "Motivation Letter" title or programme line.
+                'show_title' => false,
                 'applicant_name_position' => 'none',
                 'page_numbers' => 'none',
             ] + $standard,
@@ -138,9 +140,13 @@ class DocumentConfigurationSeeder extends Seeder
                 'font_size' => 10.5,
                 'line_spacing' => 1.15,
                 'heading_font_size' => 12,
-                'applicant_name_position' => 'header',
+                // A CV leads with the person's name as its title (the contact line sits right under it).
+                'title_template' => '{applicant_name}',
+                'title_font_size' => 20,
+                'applicant_name_position' => 'none',
                 'page_numbers' => 'bottom_right',
             ] + $standard,
+            self::classicCv() + $standard,
             [
                 'name' => 'Visa statement & financial intent',
                 'slug' => 'visa-statement-of-purpose',
@@ -216,6 +222,54 @@ class DocumentConfigurationSeeder extends Seeder
                 'applicant_name_position' => 'none',
                 'page_numbers' => 'none',
             ] + $standard,
+        ];
+    }
+
+    /**
+     * The default CV layout (it outranks "Executive Resume / CV"), modelled on a
+     * classic Word CV: Times New Roman 12 pt single-spaced, the name in capitals
+     * as the title, a centred two-line contact block with blue links, blue section
+     * headings in capitals over a thin rule, entry lines with the organisation and
+     * [dates] in grey and the dates at the right margin, a justified summary and
+     * left-aligned bullets. Also used by the production data script.
+     */
+    public static function classicCv(): array
+    {
+        return [
+            'name' => 'Classic Professional CV',
+            'slug' => 'classic-professional-cv',
+            'description' => 'Classic CV: Times New Roman 12 pt, the name in capitals as the title, a centred two-line contact block with blue links, blue section headings in capitals with a rule, entry lines with the organisation and [dates] in grey (dates on the right).',
+            'is_default' => false,
+            'is_active' => true,
+            'priority' => 20,
+            'match_rules' => ['document_kinds' => ['cv', 'resume']],
+            'page_size' => 'A4',
+            'margin_top_mm' => 15,
+            'margin_right_mm' => 19,
+            'margin_bottom_mm' => 15,
+            'margin_left_mm' => 19,
+            'font_family' => 'Times New Roman',
+            'font_size' => 12,
+            'line_spacing' => 1,
+            'paragraph_spacing_pt' => 2,
+            'first_line_indent_mm' => 0,
+            'text_align' => 'justify',
+            'bullet_align' => 'left',
+            'show_title' => true,
+            'title_template' => '{applicant_name}',
+            'title_font_size' => 16,
+            'title_align' => 'center',
+            'title_uppercase' => true,
+            'heading_font_size' => 12,
+            'heading_color' => '#2F5496',
+            'heading_uppercase' => true,
+            'heading_rule_color' => '#2F5496',
+            'applicant_name_position' => 'none',
+            'contact_layout' => 'two_lines',
+            'link_color' => '#2F5496',
+            'entry_line_style' => true,
+            'entry_detail_color' => '#595959',
+            'page_numbers' => 'none',
         ];
     }
 

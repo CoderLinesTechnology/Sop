@@ -79,5 +79,7 @@
     </main>
 
     <x-site.footer :site-name="$siteName" :tagline="$tagline" :services="$footerServices" :socials="$socials" :compact="$bare" />
+
+    <x-referral-consent-prompt />
 </body>
 </html>

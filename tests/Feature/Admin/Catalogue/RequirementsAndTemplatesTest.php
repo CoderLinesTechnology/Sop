@@ -165,3 +165,41 @@ it('keeps content and finance admins out of requirements and templates', functio
     $this->get(RequirementRuleResource::getUrl('index'))->assertForbidden();
     $this->get(DocumentTemplateResource::getUrl('index'))->assertForbidden();
 })->with([AdminRole::Content, AdminRole::Finance]);
+
+it('edits the colours, capitals and CV layout options of a template, validating colours', function () {
+    actingAsAdmin(AdminRole::Ai);
+    $this->withoutVite();
+    $template = DocumentTemplate::query()->create(['name' => 'Plain CV', 'slug' => 'plain-cv', 'match_rules' => ['document_kinds' => ['resume']]]);
+
+    // The edit page shows the new tab (and still opens for templates saved before it existed).
+    $this->get(DocumentTemplateResource::getUrl('edit', ['record' => $template]).'?format-tab=colours-cv-layout::data::tab')
+        ->assertOk()->assertSee('Section heading colour')->assertSee('Styled entry lines');
+
+    Livewire::test(EditDocumentTemplate::class, ['record' => $template->getRouteKey()])
+        ->assertFormSet(['contact_layout' => 'single_line', 'entry_line_style' => false, 'heading_color' => null])
+        ->fillForm(['heading_color' => 'blue'])
+        ->call('save')
+        ->assertHasFormErrors(['heading_color']);
+
+    Livewire::test(EditDocumentTemplate::class, ['record' => $template->getRouteKey()])
+        ->fillForm([
+            'title_uppercase' => true,
+            'heading_uppercase' => true,
+            'heading_color' => '#2f5496',
+            'heading_rule_color' => '#2f5496',
+            'contact_layout' => 'two_lines',
+            'link_color' => '#2F5496',
+            'entry_line_style' => true,
+            'entry_detail_color' => '#595959',
+            'bullet_align' => 'left',
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $template->refresh();
+    $audit = AuditLog::query()->where('action', 'document_template.updated')->latest('id')->firstOrFail();
+
+    expect($template->only(['title_uppercase', 'heading_uppercase', 'heading_color', 'heading_rule_color', 'contact_layout', 'link_color', 'entry_line_style', 'entry_detail_color', 'bullet_align']))
+        ->toBe(['title_uppercase' => true, 'heading_uppercase' => true, 'heading_color' => '#2F5496', 'heading_rule_color' => '#2F5496', 'contact_layout' => 'two_lines', 'link_color' => '#2F5496', 'entry_line_style' => true, 'entry_detail_color' => '#595959', 'bullet_align' => 'left'])
+        ->and($audit->after)->toHaveKeys(['heading_color', 'contact_layout', 'entry_line_style']);
+});

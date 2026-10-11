@@ -45,6 +45,9 @@
                     <ul class="mt-4 space-y-2.5 text-sm">
                         <li><a href="{{ route('pages.show', 'about') }}" class="hover:text-white">About</a></li>
                         <li><a href="{{ route('contact.show') }}" class="hover:text-white">Contact</a></li>
+                        @if (\App\Domain\Referrals\ReferralProgramme::applicationsOpen())
+                            <li><a href="{{ route('partners.apply') }}" class="hover:text-white">Become a partner</a></li>
+                        @endif
                         <li><a href="{{ route('pages.show', 'privacy-policy') }}" class="hover:text-white">Privacy</a></li>
                         <li><a href="{{ route('pages.show', 'terms') }}" class="hover:text-white">Terms</a></li>
                         <li><a href="{{ route('pages.show', 'refund-policy') }}" class="hover:text-white">Refund Policy</a></li>

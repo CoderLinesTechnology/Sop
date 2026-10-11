@@ -37,6 +37,12 @@ final class TextNormalizer
         return trim(preg_replace('/[^\S\n]+/u', ' ', $text) ?? $text);
     }
 
+    /** Text without bullet glyphs (list markers a word processor draws as text). */
+    public static function withoutBullets(string $text): string
+    {
+        return preg_replace('/[\x{2022}\x{25CF}\x{25AA}\x{25E6}\x{F0B7}\x{F0A7}]/u', '', $text) ?? $text;
+    }
+
     /** Normalised text without any whitespace. */
     public static function compact(string $text): string
     {

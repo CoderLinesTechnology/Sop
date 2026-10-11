@@ -6,6 +6,7 @@ use App\Enums\DocumentKind;
 use App\Enums\PaymentStatus;
 use App\Filament\Resources\Customers\CustomerResource;
 use App\Filament\Resources\Orders\OrderInsights;
+use App\Filament\Resources\Referrers\ReferrerResource;
 use App\Filament\Support\Operations\AdminContext;
 use App\Filament\Support\Operations\Format;
 use App\Models\Order;
@@ -161,6 +162,21 @@ class OrderOverviewTab
                     ->state(fn (Order $record): string => '−'.Format::money($record->coupon_discount, $record->currency))
                     ->helperText(fn (Order $record): ?string => $record->coupon_code)
                     ->visible(fn (Order $record): bool => $record->coupon_discount > 0 || filled($record->coupon_code)),
+                TextEntry::make('referred_by')
+                    ->label('Referral')
+                    ->state(fn (Order $record): ?string => $record->referrer ? 'Referred by '.$record->referrer->name.' ('.$record->referral_code.')' : null)
+                    ->helperText(fn (Order $record): ?string => implode(' · ', array_filter([
+                        match ($record->referral_source) {
+                            'code' => 'Code typed at checkout',
+                            'link' => 'Referral link',
+                            default => null,
+                        },
+                        $record->referred_at ? Format::dateTime($record->referred_at) : null,
+                    ])) ?: null)
+                    ->url(fn (Order $record): ?string => $record->referrer && ReferrerResource::canView($record->referrer)
+                        ? ReferrerResource::getUrl(ReferrerResource::canEdit($record->referrer) ? 'edit' : 'view', ['record' => $record->referrer])
+                        : null)
+                    ->visible(fn (Order $record): bool => $record->referrer_id !== null),
                 TextEntry::make('total_amount')
                     ->label('Total')
                     ->formatStateUsing(fn (?int $state, Order $record): string => Format::money($state, $record->currency))

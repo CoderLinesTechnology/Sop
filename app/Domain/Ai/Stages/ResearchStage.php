@@ -19,10 +19,21 @@ use App\Domain\Ai\Research\UrlNormalizer;
  * URL, title, source type, verbatim quote, confidence and relevance; the URLs
  * the model actually saw (search sources + url_citation annotations) are
  * recorded for verification.
+ *
+ * A CV is tailored from the job description the customer pasted, so for a
+ * resume order the web search runs only when the order names a target
+ * employer or organisation or gives a job-posting link. Otherwise the stage
+ * completes without a model call (and verification has nothing to check).
  */
 class ResearchStage implements Stage
 {
     private const MIN_FIT_CLAIMS = 2;
+
+    /** Answer keys or labels that name a target employer or organisation. */
+    private const EMPLOYER_FIELD = '/\b(employer|company|organi[sz]ation|firm)\b/i';
+
+    /** A link, with or without a scheme (job postings are often pasted as "www..."). */
+    private const LINK = '~\bhttps?://[^\s<>"]+|\bwww\.[a-z0-9-]+(\.[a-z0-9-]+)+~i';
 
     private const MAX_CLAIMS_PER_PASS = 25;
 
@@ -30,6 +41,21 @@ class ResearchStage implements Stage
 
     public function run(StageContext $ctx): StageResult
     {
+        if (($skipped = $this->skipReason($ctx)) !== null) {
+            return StageResult::completed([
+                'skipped' => true,
+                'skip_reason' => $skipped,
+                'claims' => [],
+                'seen_urls' => [],
+                'official_domains' => [],
+                'programme_found' => false,
+                'fit_summary' => '',
+                'requirements_summary' => '',
+                'gaps' => [],
+                'passes' => [],
+            ]);
+        }
+
         $analysis = $ctx->analysis();
         $officialDomains = array_values(array_unique(array_map(
             fn ($d) => (string) $d['domain'],
@@ -145,6 +171,38 @@ class ResearchStage implements Stage
             || ! $first['programme_found']
             || count($fit) < self::MIN_FIT_CLAIMS
             || $requirements === [];
+    }
+
+    /**
+     * Why web research is not worth its cost for this order (null = research).
+     * Only CVs are gated: without a named employer or a job-posting link there is
+     * nothing to look up that the job description does not already say.
+     */
+    private function skipReason(StageContext $ctx): ?string
+    {
+        if (! $ctx->isResume()) {
+            return null;
+        }
+
+        if (filled($ctx->order->institution) || preg_match(self::LINK, (string) $ctx->order->essay_prompt)) {
+            return null;
+        }
+
+        foreach ($ctx->answers() as $answer) {
+            if (! in_array($answer['section'], ['application', 'additional'], true)) {
+                continue; // story answers (work history...) carry the applicant's own links, not a target
+            }
+            if (preg_match(self::LINK, $answer['answer'])) {
+                return null;
+            }
+            // Only the order form's own fields name an employer; a follow-up question that merely asks
+            // "is there an employer?" says nothing about the answer (a link in the answer still counts above).
+            if (! str_starts_with($answer['key'], 'followup_') && preg_match(self::EMPLOYER_FIELD, str_replace('_', ' ', $answer['key']).' '.$answer['question'])) {
+                return null;
+            }
+        }
+
+        return 'CV order without a named target employer or job-posting link: tailored from the job description and the applicant\'s material, so no web research was needed.';
     }
 
     /** @return list<string> the applicant's interests and goals, for relevance only */

@@ -10,6 +10,7 @@ use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Orders\RevisionService;
 use App\Domain\Payments\Paystack\PaystackGateway;
 use App\Domain\Pricing\CouponReservations;
+use App\Domain\Referrals\ReferralCommissions;
 use App\Enums\EmailTemplateKey;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentRecordStatus;
@@ -120,6 +121,10 @@ class PaymentConfirmationService
                 'fees' => isset($data['fees']) ? (int) $data['fees'] : null,
                 'verification_data' => $this->sanitize($data),
             ])->save();
+
+            // Referral commission ledger: after commit, and it can never fail or roll back this confirmation.
+            $paymentId = $payment->id;
+            $afterCommit[] = fn () => app(ReferralCommissions::class)->recordForPaymentSafely($paymentId);
 
             if ($payment->purpose === 'revision') {
                 $this->markRevisionPaid($payment, $afterCommit);

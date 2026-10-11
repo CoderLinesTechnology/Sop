@@ -29,6 +29,7 @@ it('seeds the document templates and requirement rules idempotently', function (
         'motivation-letter-european',
         'ucas-personal-statement',
         'executive-resume-cv',
+        'classic-professional-cv',
         'visa-statement-of-purpose',
         'academic-research-proposal',
         'scholarship-application-essay',

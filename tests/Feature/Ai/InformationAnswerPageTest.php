@@ -58,13 +58,32 @@ it('still requires access to the order for the answer address', function () {
     $this->post(route('orders.information', $order->public_id), ['answers' => ['q1' => 'x']])->assertForbidden();
 });
 
-it('offers answer starters under each follow-up question', function () {
-    [$order] = orderWaitingForAnswer($this);
+it('offers at most two complete suggested answers per follow-up question, never a gap to fill in', function () {
+    [$order, $request] = orderWaitingForAnswer($this);
+
+    $suggestions = $request->questions[0]['suggestions'];
+    expect($suggestions)->not->toBeEmpty()->and(count($suggestions))->toBeLessThanOrEqual(2);
+    foreach ($suggestions as $suggestion) {
+        expect($suggestion)->not->toContain('…')->not->toContain('...');
+    }
 
     $this->get(route('orders.show', $order->public_id))
         ->assertOk()
-        ->assertSee('data-starter="For example, …"', false)
-        ->assertSee('data-starter-target="f-answers-q1"', false);
+        ->assertSee('data-starter-mode="replace"', false)
+        ->assertSee('data-starter-target="f-answers-q1"', false)
+        ->assertSee('Use this answer')
+        ->assertDontSee('For example, …');
+});
+
+it('drops suggested answers that contain a gap to fill in', function () {
+    [$order] = orderWaitingForAnswer($this);
+
+    $request = app(InformationRequestService::class)->request($order->fresh(), [[
+        'question' => 'What did your final-year project investigate?',
+        'suggestions' => ['My project looked at …', 'I studied solar pumps for small farms in the Volta Region.', 'A third complete answer.', 'A fourth complete answer.'],
+    ]]);
+
+    expect($request->questions[0]['suggestions'])->toBe(['I studied solar pumps for small farms in the Volta Region.', 'A third complete answer.']);
 });
 
 it('suggests answers drafted from the customer\'s own details under each question', function () {
@@ -74,7 +93,7 @@ it('suggests answers drafted from the customer\'s own details under each questio
 
     $this->get(route('orders.show', $order->public_id))
         ->assertOk()
-        ->assertSee('Suggested answers from your details')
+        ->assertSee('Suggested answers. Tap one to use it')
         ->assertSee('data-starter="'.e($request->questions[0]['suggestions'][0]).'"', false)
         ->assertSee('data-draft-key="followup:'.$order->public_id.':', false);
 });

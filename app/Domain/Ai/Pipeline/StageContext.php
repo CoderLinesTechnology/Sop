@@ -6,7 +6,9 @@ use App\Domain\Ai\Prompts\LanguageGuide;
 use App\Domain\Ai\Samples\WritingSampleSelector;
 use App\Domain\Ai\Writing\EvidenceCorpus;
 use App\Domain\Ai\Writing\LengthChecker;
+use App\Domain\Documents\ContactLine;
 use App\Domain\Documents\DocumentModel;
+use App\Domain\Documents\LetterAddresses;
 use App\Domain\Documents\RequirementResolver;
 use App\Domain\Documents\ResolvedRequirements;
 use App\Domain\Documents\TemplateResolver;
@@ -25,6 +27,7 @@ use App\Models\ResearchClaim;
 use App\Models\Revision;
 use App\Models\UploadedFile;
 use App\Models\WritingSample;
+use App\Support\Countries;
 use App\Support\Settings;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -41,6 +44,13 @@ use Throwable;
  */
 final class StageContext
 {
+    /** CV length norms (one to two pages) when no word or character limit is stated. */
+    public const CV_MIN_WORDS = 350;
+
+    public const CV_MAX_WORDS = 600;
+
+    public const CV_TARGET_WORDS = 500;
+
     private array $memo = [];
 
     public function __construct(
@@ -141,6 +151,11 @@ final class StageContext
         return in_array($this->documentKind(), [DocumentKind::MotivationLetter, DocumentKind::CoverLetter], true);
     }
 
+    public function isResume(): bool
+    {
+        return $this->documentKind() === DocumentKind::Resume;
+    }
+
     /** Administrator-written guidance for the service (trusted text). */
     public function writingGuidance(): string
     {
@@ -168,11 +183,26 @@ final class StageContext
     /** Structural rules for the writer (trusted; never contains customer or web text). */
     public function formatRules(): string
     {
+        $hasSections = $this->requirements()->requiredSections !== [];
+
+        if ($this->isResume()) {
+            return implode(' ', [
+                'CV format: a "heading" block in Title Case for each section;',
+                '"paragraph" blocks only for the Professional Summary (three to five lines), the Core Competencies line (short competencies separated by " | ") and the References line ("Available upon request.");',
+                'a "subheading" block for each role ("Job Title | Organisation | Dates"), qualification ("Degree | Institution | Dates") and seminar or certification ("Title | Provider | Year"), with dates such as "2019 – 2023", "2023 – Present" or "2021" and no brackets;',
+                'one "bullet" block per list item (one achievement, one skills group written "Label: items", one language written "English: Full professional proficiency").',
+                'No salutation, closing or signature, and no contact details or the applicant\'s name: the header with them is added automatically.',
+                $hasSections
+                    ? 'Required sections are listed in the resolved requirements: use exactly those headings, in the required order.'
+                    : 'Sections in the order the document-type focus gives, each only when the material supports it, with References always last.',
+            ]);
+        }
+
         $rules = [$this->isLetter()
             ? 'Letter format: one salutation block, body paragraph blocks, one closing block, then one signature block with the applicant\'s name.'
-            : 'Essay format: paragraph blocks only — no salutation, sign-off or signature.'];
+            : 'Essay format: paragraph blocks only, with no salutation, sign-off or signature.'];
 
-        $rules[] = $this->requirements()->requiredSections !== []
+        $rules[] = $hasSections
             ? 'Required sections are listed in the resolved requirements: introduce each with a heading block whose text is exactly the required heading, in the required order.'
             : 'No headings: continuous prose in paragraph blocks.';
 
@@ -191,22 +221,33 @@ final class StageContext
             'programme' => $order->programme,
             'degree_level' => $order->degree_level,
             'country' => $order->country_code,
+            // The name as well, so the destination's conventions and official sites are unambiguous.
+            'country_name' => $this->memo['country_name'] ??= Countries::name($order->country_code),
             'intake' => $order->intake,
             'application_deadline' => $order->deadline?->format('j F Y'),
-            'essay_question' => $order->essay_prompt,
+            // On a CV order the "prompt" field carries the job description the CV is tailored to.
+            ($this->isResume() ? 'job_description' : 'essay_question') => $order->essay_prompt,
             'word_limit_stated_by_customer' => $order->word_limit,
         ], fn ($value) => $value !== null && $value !== '');
     }
 
     /**
-     * The applicant's answers, without contact details or upload fields.
+     * The applicant's answers, without contact details, addresses or upload
+     * fields (on CVs also the fields of the contact line, which the document
+     * engine adds itself: ContactLine; a letter's address blocks likewise:
+     * LetterAddresses).
      *
      * @return list<array{key:string, question:string, section:string, answer:string}>
      */
     public function answers(): array
     {
+        $contactKeys = [
+            ...(ContactLine::appliesTo($this->order->documentKind()) ? ContactLine::answerKeys() : []),
+            ...LetterAddresses::answerKeys(),
+        ];
+
         return $this->memo['answers'] ??= $this->order->answers()->orderBy('id')->get()
-            ->reject(fn (OrderAnswer $a) => in_array((string) $a->type, ['email', 'phone', 'file'], true) || in_array($a->field_key, ['email', 'phone'], true))
+            ->reject(fn (OrderAnswer $a) => in_array((string) $a->type, ['email', 'phone', 'file'], true) || in_array($a->field_key, ['email', 'phone', ...$contactKeys], true))
             ->map(fn (OrderAnswer $a) => [
                 'key' => $a->field_key,
                 'question' => (string) $a->label,
@@ -271,11 +312,19 @@ final class StageContext
                 'evidence' => $fact['evidence_quote'] ?? null,
             ], $this->facts()),
             // The customer's own instructions about this document and the material they offered as a reference.
-            'customer_guidance' => array_values(array_map(fn (array $item) => [
-                'type' => $item['type'] ?? null,
-                'guidance' => $item['guidance'] ?? null,
-                'quote' => $item['quote'] ?? null,
-            ], (array) ($profile['customer_guidance'] ?? []))),
+            // In a revision job the revision request leads, so editorial and review passes keep what was asked for.
+            'customer_guidance' => array_values([
+                ...($this->isRevision() && $this->revision() ? [[
+                    'type' => 'instruction',
+                    'guidance' => 'The customer\'s revision request for this version; keep every change it asks for.',
+                    'quote' => mb_substr((string) $this->revision()->request_text, 0, 2000),
+                ]] : []),
+                ...array_map(fn (array $item) => [
+                    'type' => $item['type'] ?? null,
+                    'guidance' => $item['guidance'] ?? null,
+                    'quote' => $item['quote'] ?? null,
+                ], (array) ($profile['customer_guidance'] ?? [])),
+            ]),
         ];
     }
 
@@ -436,7 +485,15 @@ final class StageContext
 
     public function limitsSummary(): string
     {
-        return $this->requirements()->limitsSummary();
+        $requirements = $this->requirements();
+        if (! $this->isResume() || $this->hasWordOrCharacterLimit()) {
+            return $requirements->limitsSummary();
+        }
+
+        // A CV is judged by CV norms, not by an essay-style word count.
+        return ($requirements->maxPages ? "at most {$requirements->maxPages} page(s); " : 'no official limit found; ')
+            .'CV length: one to two pages, about '.self::CV_MIN_WORDS.' to '.self::CV_MAX_WORDS.' words (target about '.$this->targetWords().' words). '
+            .'A complete, concise CV that covers every relevant entry meets the length requirement; never pad it to reach a word count.';
     }
 
     /** Target length in words, within every hard limit. */
@@ -444,9 +501,34 @@ final class StageContext
     {
         $requirements = $this->requirements();
         $base = $requirements->targetWords > 0 ? $requirements->targetWords : 650;
+
+        // Without a stated word or character limit, the service's or the kind's essay-style default
+        // does not fit a CV: aim for one to two pages instead.
+        if ($this->isResume() && ! $this->hasWordOrCharacterLimit()) {
+            $base = $base > self::CV_MAX_WORDS ? self::CV_TARGET_WORDS : max(self::CV_MIN_WORDS, $base);
+        }
+
         $targets = (new LengthChecker)->targets($requirements, $this->template(), $base, 0);
 
         return max(80, (int) ($targets['words'] ?? $base));
+    }
+
+    /**
+     * Share of the target outside which the limits stage treats the length as "far off" when no
+     * hard limit applies: a CV's length follows the applicant's experience, so its band is wider.
+     *
+     * @return array{0: float, 1: float}
+     */
+    public function softLengthBand(): array
+    {
+        return $this->isResume() && ! $this->hasWordOrCharacterLimit() ? [0.5, 1.6] : [0.6, 1.3];
+    }
+
+    private function hasWordOrCharacterLimit(): bool
+    {
+        $r = $this->requirements();
+
+        return (bool) ($r->maxWords || $r->minWords || $r->maxCharacters || $r->minCharacters);
     }
 
     // ------------------------------------------------------------------ draft

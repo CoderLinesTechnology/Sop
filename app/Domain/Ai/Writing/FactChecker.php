@@ -97,8 +97,8 @@ final class FactChecker
     }
 
     /**
-     * Remove sentences containing removable problems. Blocks left empty are
-     * dropped (headings are kept).
+     * Remove sentences containing removable problems from paragraphs and
+     * bullets. Blocks left empty are dropped (headings are kept).
      *
      * @param  list<array{type:string, excerpt:string}>  $issues
      */
@@ -116,7 +116,7 @@ final class FactChecker
 
         $blocks = [];
         foreach ($document->blocks as $block) {
-            if ($block['type'] !== 'paragraph') {
+            if (! DocumentModel::isBody($block['type'])) {
                 $blocks[] = $block;
 
                 continue;
@@ -124,11 +124,11 @@ final class FactChecker
 
             $kept = array_filter(SentenceSplitter::split($block['text']), fn (string $s) => ! in_array($s, $excerpts, true));
             if ($kept !== []) {
-                $blocks[] = ['type' => 'paragraph', 'text' => implode(' ', $kept)];
+                $blocks[] = ['type' => $block['type'], 'text' => implode(' ', $kept)];
             }
         }
 
-        return new DocumentModel($document->title, $document->subtitle, $document->applicantName, $blocks, $document->languageVariant, $document->date);
+        return new DocumentModel($document->title, $document->subtitle, $document->applicantName, $blocks, $document->languageVariant, $document->date, $document->contact);
     }
 
     /** @return list<string> */

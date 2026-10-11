@@ -175,7 +175,7 @@ class FactCheckStage implements Stage
         $removed = 0;
         $blocks = [];
         foreach ($draft->blocks as $block) {
-            if ($block['type'] !== 'paragraph') {
+            if (! DocumentModel::isBody($block['type'])) {
                 $blocks[] = $block;
 
                 continue;
@@ -197,11 +197,11 @@ class FactCheckStage implements Stage
                 }
             }
             if ($kept !== []) {
-                $blocks[] = ['type' => 'paragraph', 'text' => implode(' ', $kept)];
+                $blocks[] = ['type' => $block['type'], 'text' => implode(' ', $kept)];
             }
         }
 
-        return [new DocumentModel($draft->title, $draft->subtitle, $draft->applicantName, $blocks, $draft->languageVariant, $draft->date), $removed];
+        return [new DocumentModel($draft->title, $draft->subtitle, $draft->applicantName, $blocks, $draft->languageVariant, $draft->date, $draft->contact), $removed];
     }
 
     /** @return list<string> every claim key of the dossier job (safe or not) */

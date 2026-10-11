@@ -19,6 +19,15 @@ enum EmailTemplateKey: string implements HasLabel
     case MagicLink = 'magic_link';
     case NewsletterConfirm = 'newsletter_confirm';
     case SupportReceived = 'support_received';
+    case PartnerDashboardLink = 'partner_dashboard_link';
+    case PartnerApplicationConfirm = 'partner_application_confirm';
+    case PartnerApplicationReceived = 'partner_application_received';
+    case PartnerApplicationApproved = 'partner_application_approved';
+    case PartnerApplicationRejected = 'partner_application_rejected';
+    case PartnerPayoutRequested = 'partner_payout_requested';
+    case PartnerPayoutPaid = 'partner_payout_paid';
+    case PartnerPayoutRejected = 'partner_payout_rejected';
+    case PartnerPaymentDetailsConfirm = 'partner_payment_details_confirm';
 
     public function getLabel(): string
     {
@@ -35,6 +44,15 @@ enum EmailTemplateKey: string implements HasLabel
             self::MagicLink => 'Account sign-in link',
             self::NewsletterConfirm => 'Newsletter confirmation',
             self::SupportReceived => 'Support request received',
+            self::PartnerDashboardLink => 'Referral partner dashboard link',
+            self::PartnerApplicationConfirm => 'Partner application: confirm email',
+            self::PartnerApplicationReceived => 'Partner application received',
+            self::PartnerApplicationApproved => 'Partner application approved',
+            self::PartnerApplicationRejected => 'Partner application not accepted',
+            self::PartnerPayoutRequested => 'Partner payout requested',
+            self::PartnerPayoutPaid => 'Partner payout paid',
+            self::PartnerPayoutRejected => 'Partner payout not paid',
+            self::PartnerPaymentDetailsConfirm => 'Partner payment details: confirm change',
         };
     }
 
@@ -66,6 +84,15 @@ enum EmailTemplateKey: string implements HasLabel
             self::MagicLink => ['login_link', 'expires_minutes'],
             self::NewsletterConfirm => ['confirm_link'],
             self::SupportReceived => ['customer_name', 'order_id'],
+            self::PartnerDashboardLink => ['partner_name', 'referral_code', 'share_link', 'dashboard_link'],
+            self::PartnerApplicationConfirm => ['applicant_name', 'confirm_link'],
+            self::PartnerApplicationReceived => ['applicant_name'],
+            self::PartnerApplicationApproved => ['partner_name', 'referral_code', 'commission_rate', 'share_link', 'dashboard_link'],
+            self::PartnerApplicationRejected => ['applicant_name', 'rejection_reason'],
+            self::PartnerPayoutRequested => ['partner_name', 'payout_amount', 'payment_method', 'dashboard_link'],
+            self::PartnerPayoutPaid => ['partner_name', 'payout_amount', 'payout_reference', 'payment_method', 'dashboard_link'],
+            self::PartnerPayoutRejected => ['partner_name', 'payout_amount', 'rejection_reason', 'dashboard_link'],
+            self::PartnerPaymentDetailsConfirm => ['partner_name', 'payment_method', 'confirm_link'],
         };
     }
 }

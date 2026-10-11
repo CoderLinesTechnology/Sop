@@ -53,7 +53,7 @@ final class WritingSampleOverlap
 
         $findings = [];
         foreach ($draft->blocks as $block) {
-            if ($block['type'] !== 'paragraph') {
+            if (! DocumentModel::isBody($block['type'])) {
                 continue;
             }
 

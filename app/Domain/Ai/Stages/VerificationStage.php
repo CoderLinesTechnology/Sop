@@ -54,7 +54,9 @@ class VerificationStage implements Stage
         ResearchClaim::query()->where('order_id', $ctx->order->id)->where('ai_job_id', $ctx->job->id)->delete();
 
         if ($claims === []) {
-            return StageResult::completed(['claims' => 0, 'verified' => 0, 'safe' => 0, 'requirements' => [], 'conflicts' => []]);
+            // Nothing to verify (no model call); say why when research was skipped on purpose.
+            return StageResult::completed(['claims' => 0, 'verified' => 0, 'safe' => 0, 'requirements' => [], 'conflicts' => []]
+                + (! empty($research['skipped']) ? ['skipped' => true, 'skip_reason' => (string) ($research['skip_reason'] ?? '')] : []));
         }
 
         $official = (array) ($research['official_domains'] ?? []);

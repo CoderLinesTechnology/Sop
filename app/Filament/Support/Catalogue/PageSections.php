@@ -22,7 +22,7 @@ final class PageSections
     /** Pages the site depends on: their slugs cannot change and they cannot be deleted. */
     public const SYSTEM_PAGES = [
         'home', 'services', 'resources', 'how-it-works', 'about', 'faq', 'contact',
-        'privacy-policy', 'terms', 'refund-policy', 'cookie-policy',
+        'privacy-policy', 'terms', 'refund-policy', 'cookie-policy', 'become-a-partner',
     ];
 
     public const KINDS = [
@@ -71,6 +71,10 @@ final class PageSections
         ],
         'contact' => [
             'hero' => ['Hero', null, self::HEADING],
+        ],
+        'become-a-partner' => [
+            'hero' => ['Hero', null, self::HEADING],
+            'details' => ['How the programme works', 'Points shown next to the application form, in order.', ['__list' => 'details']],
         ],
     ];
 

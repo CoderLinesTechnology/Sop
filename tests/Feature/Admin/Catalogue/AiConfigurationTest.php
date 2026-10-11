@@ -179,7 +179,7 @@ it('creates workflows from the defaults, keeps one default and versions config c
     $old = AiWorkflow::query()->create(['name' => 'Old default', 'slug' => 'old-default', 'is_default' => true, 'is_active' => true, 'config' => []]);
 
     Livewire::test(CreateAiWorkflow::class)
-        ->assertSchemaStateSet(['config.quality.threshold' => 8.0, 'config.stages.writing.enabled' => true])
+        ->assertSchemaStateSet(['config.quality.threshold' => 8.1, 'config.stages.writing.enabled' => true])
         ->fillForm([
             'name' => 'Premium',
             'slug' => 'premium',

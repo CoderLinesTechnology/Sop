@@ -33,7 +33,7 @@ class SecurityHeaders
         $headers->set('X-Frame-Options', 'DENY');
         $headers->set('Cross-Origin-Opener-Policy', 'same-origin');
         $headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
-        $headers->set('Referrer-Policy', $request->is('o/*', 'checkout/*', 'account*') ? 'no-referrer' : 'strict-origin-when-cross-origin');
+        $headers->set('Referrer-Policy', $request->is('o/*', 'checkout/*', 'account*', 'partner', 'partner/*', 'become-a-partner/confirm/*') ? 'no-referrer' : 'strict-origin-when-cross-origin');
 
         if (config('statementra.security.hsts') && $request->isSecure()) {
             $headers->set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
@@ -43,7 +43,7 @@ class SecurityHeaders
             $headers->set('Content-Security-Policy', $isAdmin ? $this->adminPolicy() : $this->publicPolicy($nonce));
         }
 
-        if ($request->is('o/*', 'checkout/*', 'account*', 'start*') || $isAdmin) {
+        if ($request->is('o/*', 'checkout/*', 'account*', 'start*', 'partner', 'partner/*', 'become-a-partner/confirm/*') || $isAdmin) {
             $headers->set('Cache-Control', 'no-store, private');
             // Kept out of search results by header, so robots.txt never has to name the admin path.
             $headers->set('X-Robots-Tag', 'noindex, nofollow');

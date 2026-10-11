@@ -32,6 +32,9 @@ class DocumentTemplate extends Model
             'first_line_indent_mm' => 'float',
             'title_font_size' => 'float',
             'heading_font_size' => 'float',
+            'title_uppercase' => 'boolean',
+            'heading_uppercase' => 'boolean',
+            'entry_line_style' => 'boolean',
         ];
     }
 

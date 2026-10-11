@@ -116,15 +116,14 @@
                     <section class="card p-6 sm:p-8" aria-labelledby="info-heading">
                         <x-ui.icon-badge icon="message" color="yellow" size="lg" />
                         <h1 id="info-heading" class="display-2 mt-5">We need one more detail to make your document stronger.</h1>
-                        <p class="lead mt-3">We never invent information. Please answer every question: a few sentences each is enough, and every answer makes your document more personal and stronger.</p>
+                        <p class="lead mt-3">We never invent information. Pick a suggested answer or write your own: a few sentences each is enough.</p>
                         <form method="POST" action="{{ route('orders.information', $order->public_id) }}" class="mt-6 space-y-5" data-submit-once
                               data-draft-key="followup:{{ $order->public_id }}:{{ $informationRequest->requested_at?->timestamp }}" data-keepalive-url="{{ route('orders.progress', $order->public_id) }}">
                             @csrf
                             @foreach ($informationRequest->questions as $question)
                                 <div>
                                     <x-form.textarea :name="'answers['.$question['key'].']'" :label="$question['question']" rows="3" maxlength="3000" :help="$question['why'] ?: null" />
-                                    <x-form.starters :starters="$question['suggestions'] ?? []" :target="'f-answers-'.$question['key']" label="Suggested answers from your details (tap one, then make it yours):" />
-                                    <x-form.starters :starters="$followupStarters" :target="'f-answers-'.$question['key']" />
+                                    <x-form.starters :starters="$question['suggestions'] ?? []" :target="'f-answers-'.$question['key']" variant="answers" label="Suggested answers. Tap one to use it, then change anything you like:" />
                                 </div>
                             @endforeach
                             @error('answers')<p class="field-error" role="alert">{{ $message }}</p>@enderror

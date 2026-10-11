@@ -9,6 +9,7 @@ use App\Domain\Notifications\AdminNotifier;
 use App\Domain\Orders\OrderStateMachine;
 use App\Domain\Payments\Paystack\PaystackException;
 use App\Domain\Payments\Paystack\PaystackGateway;
+use App\Domain\Referrals\ReferralCommissions;
 use App\Enums\AiJobStatus;
 use App\Enums\EmailTemplateKey;
 use App\Enums\OrderStatus;
@@ -223,6 +224,9 @@ class RefundService
         if ($alreadyProcessed) {
             return;
         }
+
+        // Referral commission reversal: after commit, and it can never fail or undo this refund.
+        app(ReferralCommissions::class)->reverseForRefundSafely($refund->id);
 
         $order = $refund->order->refresh();
         if ($order->status === OrderStatus::Refunded && $order->latestAiJob && ! in_array($order->latestAiJob->status, [AiJobStatus::Completed, AiJobStatus::Cancelled], true)) {

@@ -20,8 +20,11 @@ class DocumentFactory
      * approved content, its counts, the formatting snapshot (template plus
      * requirement overrides) and the requirements it was written against.
      * Presentation details the model leaves open are completed here: the
-     * resolved language variant, the applicant's name from the order and,
-     * for letters, today's date in the destination's format.
+     * resolved language variant, the applicant's name from the order, for
+     * CVs the customer's contact line (ContactLine; never part of what a
+     * model writes or reads) and, for letters, today's date in the
+     * destination's format and the address blocks the customer gave
+     * (LetterAddresses, likewise never seen by a model).
      */
     public function createVersion(
         Order $order,
@@ -125,6 +128,7 @@ class DocumentFactory
         if (blank($date) && DocumentLayout::isLetter($model, $order->documentKind())) {
             $date = now()->format($template->date_format ?: $requirements->dateFormat ?: LanguageVariant::dateFormat($requirements->languageVariant));
         }
+        $addresses = filled($model->address) || filled($model->recipient) ? null : LetterAddresses::forOrder($order);
 
         return new DocumentModel(
             title: $model->title,
@@ -133,6 +137,9 @@ class DocumentFactory
             blocks: $model->blocks,
             languageVariant: LanguageVariant::normalize($requirements->languageVariant) ?? LanguageVariant::DEFAULT,
             date: $date,
+            contact: filled($model->contact) ? $model->contact : ContactLine::forOrder($order),
+            address: $addresses === null ? $model->address : $addresses['address'],
+            recipient: $addresses === null ? $model->recipient : $addresses['recipient'],
         );
     }
 }

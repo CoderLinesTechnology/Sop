@@ -2,6 +2,7 @@
 
 namespace App\Domain\Documents;
 
+use App\Enums\DocumentKind;
 use App\Models\DocumentTemplate;
 
 /**
@@ -20,13 +21,21 @@ final class TemplateSnapshot
 
     public const PAGE_NUMBER_POSITIONS = ['none', 'bottom_center', 'bottom_right', 'bottom_left', 'top_center', 'top_right', 'top_left'];
 
+    /** single_line: "email | phone | location | links"; two_lines: "email | Tel: phone | location", then the links. */
+    public const CONTACT_LAYOUTS = ['single_line', 'two_lines'];
+
+    /** Document kinds laid out with a thin rule under each section heading (CVs). */
+    public const HEADING_RULE_KINDS = [DocumentKind::Resume];
+
     /** Template columns captured in the snapshot. */
     private const FIELDS = [
         'page_size', 'margin_top_mm', 'margin_right_mm', 'margin_bottom_mm', 'margin_left_mm', 'font_family',
         'font_size', 'line_spacing', 'paragraph_spacing_pt', 'first_line_indent_mm', 'text_align', 'show_title',
         'title_template', 'title_font_size', 'title_align', 'heading_font_size', 'applicant_name_position',
         'header_text', 'footer_text', 'page_numbers', 'page_number_format', 'date_format', 'citation_style',
-        'filename_pattern', 'include_name_in_filename', 'include_branding',
+        'filename_pattern', 'include_name_in_filename', 'include_branding', 'title_uppercase', 'heading_color',
+        'heading_uppercase', 'heading_rule_color', 'contact_layout', 'link_color', 'entry_line_style', 'entry_detail_color',
+        'bullet_align',
     ];
 
     /** Professional defaults ("Standard application (A4)"), used for anything a template leaves empty. */
@@ -59,6 +68,16 @@ final class TemplateSnapshot
             'filename_pattern' => '{applicant_name}_{document_type}',
             'include_name_in_filename' => true,
             'include_branding' => false,
+            // Presentation options; these defaults are the original look (black, no capitals, plain lines).
+            'title_uppercase' => false,
+            'heading_color' => null,
+            'heading_uppercase' => false,
+            'heading_rule_color' => null,
+            'contact_layout' => 'single_line',
+            'link_color' => null,
+            'entry_line_style' => false,
+            'entry_detail_color' => null,
+            'bullet_align' => null,
         ];
     }
 
@@ -134,6 +153,8 @@ final class TemplateSnapshot
         $snapshot['applied_overrides'] = $overrides;
         $snapshot['ignored_overrides'] = $ignored;
         $snapshot['context'] = array_merge($snapshot['context'], array_filter($context, fn ($v) => $v !== null && $v !== ''));
+        // Decided once, here, and stored: re-rendering an older version keeps its look.
+        $snapshot['heading_rule'] = in_array(DocumentKind::tryFrom((string) $snapshot['context']['document_kind']), self::HEADING_RULE_KINDS, true);
 
         return $snapshot;
     }
@@ -182,6 +203,15 @@ final class TemplateSnapshot
         $s['show_title'] = (bool) $s['show_title'];
         $s['include_name_in_filename'] = (bool) $s['include_name_in_filename'];
         $s['include_branding'] = (bool) $s['include_branding'];
+        $s['title_uppercase'] = (bool) $s['title_uppercase'];
+        $s['heading_uppercase'] = (bool) $s['heading_uppercase'];
+        $s['entry_line_style'] = (bool) $s['entry_line_style'];
+        foreach (['heading_color', 'heading_rule_color', 'link_color', 'entry_detail_color'] as $field) {
+            $s[$field] = self::color($s[$field]);
+        }
+        $s['contact_layout'] = in_array($s['contact_layout'], self::CONTACT_LAYOUTS, true) ? $s['contact_layout'] : 'single_line';
+        // Bullet points aligned on their own (e.g. ragged lists under a justified summary); null: like the body text.
+        $s['bullet_align'] = self::align((string) $s['bullet_align'], ['left', 'justify'], '') ?: null;
 
         foreach (['title_template', 'header_text', 'footer_text', 'date_format'] as $field) {
             $s[$field] = filled($s[$field]) ? mb_substr(trim((string) $s[$field]), 0, 255) : null;
@@ -193,6 +223,8 @@ final class TemplateSnapshot
         $s['template_slug'] = $snapshot['template_slug'] ?? null;
         $s['language_variant'] = LanguageVariant::normalize($snapshot['language_variant'] ?? null) ?? LanguageVariant::DEFAULT;
         $s['template_chosen'] = (bool) ($snapshot['template_chosen'] ?? false);
+        // A thin rule under each section heading (snapshots from before this option have none).
+        $s['heading_rule'] = (bool) ($snapshot['heading_rule'] ?? false);
         $s['applied_overrides'] = (array) ($snapshot['applied_overrides'] ?? []);
         $s['ignored_overrides'] = (array) ($snapshot['ignored_overrides'] ?? []);
         $s['context'] = (array) ($snapshot['context'] ?? []) + [
@@ -244,6 +276,14 @@ final class TemplateSnapshot
         $value = ['both' => 'justify', 'justified' => 'justify', 'centre' => 'center', 'centred' => 'center', 'start' => 'left', 'end' => 'right'][$value] ?? $value;
 
         return in_array($value, $allowed, true) ? $value : $default;
+    }
+
+    /** "#2f5496" or "2F5496" → "#2F5496"; anything else → null (the renderer's black). */
+    public static function color(mixed $value): ?string
+    {
+        $value = is_string($value) ? ltrim(trim($value), '#') : '';
+
+        return preg_match('/^[0-9a-f]{6}$/i', $value) === 1 ? '#'.strtoupper($value) : null;
     }
 
     private static function clamp(mixed $value, float $min, float $max): float

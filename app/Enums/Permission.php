@@ -41,6 +41,12 @@ final class Permission
 
     public const PromotionsManage = 'promotions.manage';
 
+    public const ReferralsView = 'referrals.view';
+
+    public const ReferralsManage = 'referrals.manage';
+
+    public const ReferralsPayouts = 'referrals.payouts';
+
     public const ContentManage = 'content.manage';
 
     public const EmailTemplatesManage = 'email_templates.manage';

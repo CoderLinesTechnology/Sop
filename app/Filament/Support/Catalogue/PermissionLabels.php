@@ -27,6 +27,9 @@ final class PermissionLabels
         Permission::PricingManage => 'Change prices',
         Permission::CouponsManage => 'Manage coupons',
         Permission::PromotionsManage => 'Manage promotions',
+        Permission::ReferralsView => 'View referrers, their referred orders and commission',
+        Permission::ReferralsManage => 'Manage referrers, dashboard links and partner applications',
+        Permission::ReferralsPayouts => 'Handle referral payouts (see payment details, mark paid, reject)',
         Permission::ContentManage => 'Manage website content (pages, articles, FAQs, testimonials)',
         Permission::EmailTemplatesManage => 'Edit email templates',
         Permission::NewsletterManage => 'Manage newsletter subscribers',
@@ -45,7 +48,7 @@ final class PermissionLabels
         'super_admin' => 'Everything, including administrators, settings and the audit log.',
         'operations_admin' => 'Orders, customers, documents, emails, revisions and support.',
         'content_admin' => 'Website content, service copy and order forms, email templates.',
-        'finance_admin' => 'Payments, refunds, prices, coupons, promotions and analytics.',
+        'finance_admin' => 'Payments, refunds, prices, coupons, promotions, referrers and analytics.',
         'ai_admin' => 'AI workflows and prompts, requirement rules, document templates.',
     ];
 

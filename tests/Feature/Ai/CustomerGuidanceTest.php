@@ -42,3 +42,13 @@ it('never records an attempt to steer the pipeline as customer guidance', functi
 
     expect(Applicant::query()->where('order_id', $order->id)->firstOrFail()->profile['customer_guidance'])->toBe([]);
 });
+
+it('tells the editor which sentences copy the customer\'s answers', function () {
+    $order = $this->paidOrder(answers: storyAnswers('Please keep it formal.'));
+
+    app(PipelineDispatcher::class)->startForOrder($order);
+
+    $editorial = FakeProvider::calls('editorial')[0] ?? null;
+    expect($editorial)->not->toBeNull()
+        ->and(json_encode($editorial->input))->toContain('copied_answer');
+});

@@ -13,6 +13,9 @@ use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\NewsletterController;
 use App\Http\Controllers\Site\OrderLookupController;
 use App\Http\Controllers\Site\PageController;
+use App\Http\Controllers\Site\PartnerApplicationController;
+use App\Http\Controllers\Site\PartnerController;
+use App\Http\Controllers\Site\ReferralConsentController;
 use App\Http\Controllers\Site\SeoController;
 use App\Http\Controllers\Site\ServiceController;
 use App\Http\Controllers\Webhooks\EmailWebhookController;
@@ -83,6 +86,33 @@ Route::middleware(['throttle:order-access', 'order.access'])->prefix('/o/{order}
         Route::post('/feedback', [OrderController::class, 'feedback'])->name('orders.feedback');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Referral partners: private dashboard link (no password) and "email it again"
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/partner', [PartnerController::class, 'request'])->name('partner.request');
+Route::post('/partner', [PartnerController::class, 'send'])->middleware('throttle:partner-link')->name('partner.send');
+Route::get('/partner/{token}', [PartnerController::class, 'show'])->where('token', '[A-Za-z0-9]{20,100}')->middleware('throttle:partner-dashboard')->name('partner.dashboard');
+Route::middleware('throttle:partner-actions')->where(['token' => '[A-Za-z0-9]{20,100}'])->group(function () {
+    Route::post('/partner/{token}/payouts', [PartnerController::class, 'requestPayout'])->name('partner.payouts.request');
+    Route::post('/partner/{token}/payouts/{payout}/cancel', [PartnerController::class, 'cancelPayout'])->whereUlid('payout')->name('partner.payouts.cancel');
+    Route::post('/partner/{token}/payment-details', [PartnerController::class, 'changePaymentDetails'])->name('partner.details.change');
+});
+// Confirming payment details from the email: GET shows the change, only the button (POST) applies it.
+Route::get('/partner/details/{token}', [PartnerController::class, 'confirmDetailsPage'])->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:partner-dashboard')->name('partner.details.confirm');
+Route::post('/partner/details/{token}', [PartnerController::class, 'confirmDetails'])->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:partner-actions')->name('partner.details.apply');
+
+// Referral consent prompt (remember the referral link for 30 days, or this visit only).
+Route::post('/referral/consent', ReferralConsentController::class)->middleware('throttle:referral-consent')->name('referral.consent');
+
+// Become a partner: application, email confirmation (GET shows, POST confirms).
+Route::get('/become-a-partner', [PartnerApplicationController::class, 'show'])->middleware('track')->name('partners.apply');
+Route::post('/become-a-partner', [PartnerApplicationController::class, 'store'])->middleware('throttle:partner-apply')->name('partners.apply.store');
+Route::get('/become-a-partner/confirm/{token}', [PartnerApplicationController::class, 'confirmPage'])->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:partner-dashboard')->name('partners.apply.confirm');
+Route::post('/become-a-partner/confirm/{token}', [PartnerApplicationController::class, 'confirm'])->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:partner-actions')->name('partners.apply.confirm.store');
 
 Route::get('/find-my-order', [OrderLookupController::class, 'show'])->name('orders.lookup');
 Route::post('/find-my-order', [OrderLookupController::class, 'send'])->middleware('throttle:magic-link')->name('orders.lookup.send');

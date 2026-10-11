@@ -17,13 +17,12 @@ afterEach(function () {
     Fixtures::removePrivateDisk();
 });
 
-it('lays out a motivation letter with date, subject, salutation, closing and signature', function () {
+it('lays out a motivation letter like a real letter: date, salutation, closing and signature, no title', function () {
     $version = Fixtures::rendered(Fixtures::motivationOrder(), Fixtures::letter());
     $layout = DocumentLayout::make($version->documentModel(), $version->template_snapshot);
 
     $expectedOrder = [
         '6 October 2026',
-        'Motivation Letter — MSc Data Science',
         'Dear Admissions Committee,',
         Fixtures::paragraph(3),
         Fixtures::paragraph(3, 3),
@@ -37,7 +36,9 @@ it('lays out a motivation letter with date, subject, salutation, closing and sig
     expect($version->template_snapshot['template_slug'])->toBe('motivation-letter-european')
         ->and($version->documentModel()->date)->toBe('6 October 2026')
         ->and($layout->isLetter)->toBeTrue()
-        ->and(array_column($layout->items, 'role'))->toBe(['date', 'title', 'salutation', 'paragraph', 'paragraph', 'paragraph', 'closing', 'signature'])
+        ->and($version->template_snapshot['show_title'])->toBeFalse()
+        ->and($layout->hidden)->toContain('title')
+        ->and(array_column($layout->items, 'role'))->toBe(['date', 'salutation', 'paragraph', 'paragraph', 'paragraph', 'closing', 'signature'])
         ->and($docxParagraphs)->toBe($expectedOrder)
         ->and(Fixtures::compact($pdfText))->toBe(Fixtures::compact(implode("\n", $expectedOrder)))
         ->and(Fixtures::pdfFonts(Fixtures::pdfBytes($version)))->toContain('Carlito')

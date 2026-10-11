@@ -7,6 +7,9 @@ use App\Domain\Ai\Pipeline\StageFailure;
 use App\Domain\Ai\Pipeline\StageResult;
 use App\Domain\Documents\DocumentFactory;
 use App\Domain\Documents\DocumentModel;
+use App\Enums\PipelineStage;
+use App\Enums\StepStatus;
+use App\Models\AiJobStep;
 use App\Models\DocumentTemplate;
 use App\Models\QualityReview;
 
@@ -40,7 +43,14 @@ class FormattingStage implements Stage
             ->where('ai_job_id', $ctx->job->id)
             ->where('passed', true)
             ->orderByDesc('round')
-            ->value('overall_score');
+            ->value('overall_score')
+            // A draft delivered after the refinement rounds ran out carries the score of its review.
+            ?? data_get(AiJobStep::query()
+                ->where('ai_job_id', $ctx->job->id)
+                ->where('stage', PipelineStage::QualityReview->value)
+                ->where('status', StepStatus::Completed->value)
+                ->orderByDesc('id')
+                ->value('output'), 'delivered_score');
 
         $version = $this->factory->createVersion(
             $order,
@@ -86,7 +96,8 @@ class FormattingStage implements Stage
 
     /**
      * Letters keep (or receive) salutation, closing and signature; essays
-     * never carry letter parts.
+     * and CVs never carry letter parts (headings, entry lines, paragraphs
+     * and bullets only).
      *
      * @param  list<array{type:string,text:string}>  $blocks
      * @return list<array{type:string,text:string}>
@@ -94,7 +105,7 @@ class FormattingStage implements Stage
     private function blocks(StageContext $ctx, array $blocks): array
     {
         if (! $ctx->isLetter()) {
-            return array_values(array_filter($blocks, fn ($b) => in_array($b['type'], ['heading', 'paragraph'], true)));
+            return array_values(array_filter($blocks, fn ($b) => in_array($b['type'], ['heading', 'subheading', 'paragraph', 'bullet'], true)));
         }
 
         $types = array_column($blocks, 'type');

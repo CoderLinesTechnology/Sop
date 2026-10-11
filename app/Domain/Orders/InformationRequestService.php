@@ -29,8 +29,8 @@ class InformationRequestService
 {
     public const MAX_QUESTIONS = 5;
 
-    /** Suggested answers kept per question (drafted from the applicant's own material; the customer edits them). */
-    public const MAX_SUGGESTIONS = 3;
+    /** Complete suggested answers kept per question (drafted from the applicant's own material; the customer edits them). */
+    public const MAX_SUGGESTIONS = 2;
 
     public function __construct(
         private readonly OrderStateMachine $states,
@@ -100,7 +100,11 @@ class InformationRequestService
         $clean = [];
         foreach ($suggestions as $suggestion) {
             $text = is_string($suggestion) ? trim(preg_replace('/\s+/u', ' ', $suggestion) ?? '') : '';
-            if ($text !== '' && ! in_array($text, $clean, true)) {
+            // A suggestion must be a complete answer: anything with a gap to fill in confuses customers.
+            if ($text === '' || preg_match('/…|\.\.\.|\[|\]|_{3,}/u', $text) === 1) {
+                continue;
+            }
+            if (! in_array($text, $clean, true)) {
                 $clean[] = mb_substr($text, 0, 400);
             }
         }

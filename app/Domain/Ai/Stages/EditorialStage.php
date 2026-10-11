@@ -7,6 +7,7 @@ use App\Domain\Ai\Llm\LlmGateway;
 use App\Domain\Ai\Pipeline\StageContext;
 use App\Domain\Ai\Pipeline\StageFailure;
 use App\Domain\Ai\Pipeline\StageResult;
+use App\Domain\Ai\Writing\AnswerCopyCheck;
 use App\Domain\Ai\Writing\DraftConverter;
 use App\Domain\Ai\Writing\StyleLinter;
 
@@ -25,13 +26,15 @@ class EditorialStage implements Stage
     public function __construct(
         private readonly LlmGateway $llm,
         private readonly StyleLinter $linter,
+        private readonly AnswerCopyCheck $copies,
     ) {}
 
     public function run(StageContext $ctx): StageResult
     {
         $draft = $ctx->currentDraft() ?? throw StageFailure::permanent('missing_draft', 'There is no draft to edit.');
         $protected = array_filter([$ctx->order->institution, $ctx->order->programme]);
-        $before = $this->linter->lint($draft, $ctx->bannedPhrases(), $ctx->languageVariant(), $protected);
+        $answers = array_column($ctx->answers(), 'answer');
+        $before = [...$this->linter->lint($draft, $ctx->bannedPhrases(), $ctx->languageVariant(), $protected, $ctx->documentKind()), ...$this->copies->find($draft, $answers)];
 
         $variables = PromptInputs::common($ctx);
         $variables['draft'] = DraftConverter::forPrompt($draft);
@@ -55,7 +58,7 @@ class EditorialStage implements Stage
             'document' => $final->toArray(),
             'used_claim_ids' => $usedClaims,
             'findings_before' => $before,
-            'findings_after' => $this->linter->lint($final, $ctx->bannedPhrases(), $ctx->languageVariant(), $protected),
+            'findings_after' => [...$this->linter->lint($final, $ctx->bannedPhrases(), $ctx->languageVariant(), $protected, $ctx->documentKind()), ...$this->copies->find($final, $answers)],
             'edit_discarded' => $discarded,
             'notes' => (string) $result->data['notes'],
         ]);

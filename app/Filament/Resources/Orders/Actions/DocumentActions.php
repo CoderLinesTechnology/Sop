@@ -218,7 +218,9 @@ final class DocumentActions
                         Select::make('type')
                             ->options([
                                 'heading' => 'Heading',
+                                'subheading' => 'Entry line (e.g. Job title | Organisation | Dates)',
                                 'paragraph' => 'Paragraph',
+                                'bullet' => 'Bullet point',
                                 'salutation' => 'Salutation',
                                 'closing' => 'Closing',
                                 'signature' => 'Signature',
@@ -245,6 +247,8 @@ final class DocumentActions
                     'subtitle' => $data['subtitle'] ?? null,
                     'applicant_name' => $data['applicant_name'] ?? null,
                     'date' => $content['date'] ?? null,
+                    // The CV contact line is kept as it was (it is not edited here).
+                    'contact' => $content['contact'] ?? null,
                     'language_variant' => $content['language_variant'] ?? ($version->language_variant ?: 'en-GB'),
                     'blocks' => array_values($data['blocks'] ?? []),
                 ]);

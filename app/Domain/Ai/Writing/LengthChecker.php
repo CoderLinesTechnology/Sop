@@ -23,6 +23,8 @@ final class LengthChecker
     private const WORDS_PER_PAGE_SINGLE = 580;
 
     /**
+     * @param  array{0: float, 1: float}  $softBand  share of the target below / above which the length counts as far off
+     *                                               when no hard limit applies (CVs use a wider band)
      * @return array{
      *   ok: bool, hard: bool,
      *   violations: list<array{type:string, limit:int, actual:int, section:?string, message:string}>,
@@ -30,7 +32,7 @@ final class LengthChecker
      *   targets: array{words:?int, characters:?int}
      * }
      */
-    public function check(DocumentModel $document, ResolvedRequirements $requirements, ?DocumentTemplate $template, int $targetWords): array
+    public function check(DocumentModel $document, ResolvedRequirements $requirements, ?DocumentTemplate $template, int $targetWords, array $softBand = [0.6, 1.3]): array
     {
         // Counted the way the destination counts (headings excluded when the portal shows the questions).
         $words = $requirements->countWords($document);
@@ -73,7 +75,8 @@ final class LengthChecker
             || $requirements->minCharacters || $requirements->maxPages;
 
         // Soft band only when nothing official constrains the length.
-        if (! $hasHardLimit && $targetWords > 0 && ($words > $targetWords * 1.3 || $words < $targetWords * 0.6)) {
+        [$softMin, $softMax] = $softBand;
+        if (! $hasHardLimit && $targetWords > 0 && ($words > $targetWords * $softMax || $words < $targetWords * $softMin)) {
             $violations[] = [
                 'type' => 'target_words', 'limit' => $targetWords, 'actual' => $words, 'section' => null,
                 'message' => "Length {$words} words is far from the target of about {$targetWords} words.",

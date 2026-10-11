@@ -9,7 +9,6 @@ use App\Filament\Support\Catalogue\FormRules;
 use App\Filament\Support\Catalogue\MediaUpload;
 use App\Filament\Support\Catalogue\SettingsSchema;
 use App\Filament\Support\Catalogue\SystemHealth;
-use App\Models\ServiceField;
 use App\Support\Audit;
 use App\Support\Money;
 use App\Support\Settings as SiteSettings;
@@ -77,6 +76,7 @@ class Settings extends Page
                         $this->generalTab(),
                         $this->ordersTab(),
                         $this->paymentsTab(),
+                        $this->referralsTab(),
                         $this->aiTab(),
                         $this->emailTab(),
                         $this->securityTab(),
@@ -227,13 +227,6 @@ class Settings extends Page
                             ])
                             ->required()
                             ->native(false),
-                        TagsInput::make('orders.followup_starters')
-                            ->label('Answer starters for follow-up questions')
-                            ->placeholder('Add a starter and press Enter')
-                            ->nestedRecursiveRules(['string', 'max:'.ServiceField::MAX_STARTER_LENGTH])
-                            ->rules(['array', 'max:'.ServiceField::MAX_STARTERS])
-                            ->helperText('Shown under every follow-up question so customers can start an answer with one tap. Use … where they fill in. Plain text, no AI.')
-                            ->columnSpanFull(),
                     ])
                     ->columns(2),
             ]);
@@ -266,6 +259,66 @@ class Settings extends Page
                             ->dehydrated(false)
                             ->copyable(),
                     ]),
+            ]);
+    }
+
+    private function referralsTab(): Tab
+    {
+        return Tab::make('Referrals')
+            ->icon(Heroicon::OutlinedUserGroup)
+            ->schema([
+                Section::make('Referral programme')
+                    ->description('Referrers and their commission rates are managed in Pricing → Referrers. Referral codes never change the price.')
+                    ->schema([
+                        Toggle::make('referrals.enabled')
+                            ->label('Referral programme on')
+                            ->helperText('When off, referral links and codes are ignored and the referrer dashboard pages are unavailable. Commission on orders already attributed is still recorded.'),
+                        TextInput::make('referrals.cookie_days')
+                            ->label('Remember a referral link for')
+                            ->integer()
+                            ->minValue(1)
+                            ->maxValue(365)
+                            ->required()
+                            ->suffix('days')
+                            ->helperText('How long a visitor who followed a referral link and agreed to be remembered is still credited to that referrer. The last link followed wins.'),
+                    ])
+                    ->columns(2),
+                Section::make('Payouts')
+                    ->description('Referrers request their whole available balance from their dashboard; you pay it and record the transfer in Pricing → Payout requests.')
+                    ->schema([
+                        TextInput::make('referrals.hold_days')
+                            ->label('Commission becomes available after')
+                            ->integer()
+                            ->minValue(0)
+                            ->maxValue(120)
+                            ->required()
+                            ->suffix('days')
+                            ->helperText('Covers the refund and revision window. Refund reversals count immediately.'),
+                        TextInput::make('referrals.minimum_payout')
+                            ->label('Minimum payout')
+                            ->required()
+                            ->inputMode('decimal')
+                            ->prefix(fn (): string => SiteSettings::currency())
+                            ->formatStateUsing(fn ($state): ?string => $state === null || $state === '' ? null : number_format(((int) $state) / 100, 2, '.', ''))
+                            ->dehydrateStateUsing(fn ($state): int => (int) round(((float) $state) * 100))
+                            ->rules(['numeric', 'min:0.01', 'max:1000000'])
+                            ->helperText('The “Request payout” button becomes active when the available balance reaches this amount.'),
+                    ])
+                    ->columns(2),
+                Section::make('Partner applications')
+                    ->schema([
+                        Toggle::make('referrals.applications_open')
+                            ->label('Accept applications on the “Become a partner” page'),
+                        TextInput::make('referrals.rejected_application_days')
+                            ->label('Delete rejected applications after')
+                            ->integer()
+                            ->minValue(7)
+                            ->maxValue(3650)
+                            ->required()
+                            ->suffix('days')
+                            ->helperText('Unconfirmed applications are deleted after 7 days.'),
+                    ])
+                    ->columns(2),
             ]);
     }
 

@@ -87,9 +87,10 @@ class DocxInspector
 
     /**
      * Body paragraphs in order, with their text (w:br → "\n", w:tab → "\t";
-     * field codes and deleted revisions excluded) and paragraph style id.
+     * field codes and deleted revisions excluded), paragraph style id and
+     * whether the paragraph is a list item (Word numbering or a list style).
      *
-     * @return list<array{text:string, style:?string, align:?string, bold:bool}>
+     * @return list<array{text:string, style:?string, align:?string, bold:bool, list:bool}>
      */
     public function paragraphs(string $documentXml): array
     {
@@ -111,11 +112,17 @@ class DocxInspector
                 $bold = $bold && $b instanceof DOMElement && ! in_array($b->getAttributeNS(self::NS, 'val'), ['0', 'false'], true);
             }
 
+            $styleId = $style instanceof DOMElement ? $style->getAttributeNS(self::NS, 'val') : null;
+            // numId 0 switches inherited numbering off.
+            $numId = $xpath->query('./w:pPr/w:numPr/w:numId', $paragraph)->item(0);
+            $numbered = $numId instanceof DOMElement && $numId->getAttributeNS(self::NS, 'val') !== '0';
+
             $paragraphs[] = [
                 'text' => $this->textOf($paragraph),
-                'style' => $style instanceof DOMElement ? $style->getAttributeNS(self::NS, 'val') : null,
+                'style' => $styleId,
                 'align' => $align instanceof DOMElement ? $align->getAttributeNS(self::NS, 'val') : null,
                 'bold' => $bold,
+                'list' => $numbered || preg_match('/^list ?(bullet|number)/i', (string) $styleId) === 1,
             ];
         }
 

@@ -46,6 +46,7 @@ enum AdminRole: string implements HasLabel
                 Permission::DashboardView, Permission::OrdersView, Permission::PaymentsView,
                 Permission::RefundsRequest, Permission::RefundsApprove, Permission::PricingManage,
                 Permission::CouponsManage, Permission::PromotionsManage, Permission::AnalyticsView,
+                Permission::ReferralsView, Permission::ReferralsManage, Permission::ReferralsPayouts,
             ],
             self::Ai => [
                 Permission::DashboardView, Permission::OrdersView, Permission::AiManage,

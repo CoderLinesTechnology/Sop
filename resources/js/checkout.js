@@ -473,5 +473,72 @@ Alpine.data('starRating', () => ({
     },
 }));
 
+// "Copy link" next to a read-only field (referral dashboard). Without clipboard
+// access the field's text is selected so it can be copied by hand.
+Alpine.data('copyText', () => ({
+    copied: false,
+
+    async copy() {
+        const field = this.$refs.field;
+        if (!field) return;
+        try {
+            await navigator.clipboard.writeText(field.value);
+            this.copied = true;
+            setTimeout(() => {
+                this.copied = false;
+            }, 2500);
+        } catch {
+            field.focus();
+            field.select();
+        }
+    },
+
+    statusText() {
+        return this.copied ? 'Link copied' : '';
+    },
+}));
+
+// Referral consent prompt: answer in place (the forms also work as plain posts).
+Alpine.data('referralConsent', () => ({
+    open: true,
+
+    async decide(event) {
+        const form = event.target;
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken(form) },
+                body: new FormData(form),
+            });
+            if (!response.ok) throw new Error('consent');
+            this.open = false;
+        } catch {
+            form.submit();
+        }
+    },
+}));
+
+// Payment details form: show the fields of the chosen method (all fields stay usable without JavaScript).
+Alpine.data('paymentMethod', () => ({
+    method: '',
+
+    init() {
+        this.method = this.$el.dataset.method || '';
+    },
+
+    choose(event) {
+        this.method = event.target.value;
+    },
+
+    isMomo() {
+        return this.method !== 'bank';
+    },
+
+    isBank() {
+        return this.method !== 'momo';
+    },
+}));
+
 window.Alpine = Alpine;
 Alpine.start();

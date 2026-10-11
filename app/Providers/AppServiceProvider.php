@@ -121,6 +121,21 @@ class AppServiceProvider extends ServiceProvider
             Limit::perHour(10)->by('ml-ip:'.$r->ip())->response($reject('magic-link')),
             Limit::perHour(3)->by('ml-email:'.strtolower((string) $r->input('email')))->response($reject('magic-link')),
         ]);
+        RateLimiter::for('partner-link', fn (Request $r) => [
+            Limit::perHour(10)->by('pl-ip:'.$r->ip())->response($reject('partner-link')),
+            Limit::perHour(3)->by('pl-email:'.strtolower(trim((string) $r->input('email'))))->response($reject('partner-link')),
+        ]);
+        RateLimiter::for('partner-dashboard', fn (Request $r) => Limit::perMinute(30)->by('pd:'.$r->ip())->response($reject('partner-dashboard')));
+        RateLimiter::for('partner-actions', fn (Request $r) => [
+            Limit::perMinute(6)->by('pa-m:'.$r->ip())->response($reject('partner-actions')),
+            Limit::perHour(30)->by('pa-h:'.$r->ip())->response($reject('partner-actions')),
+        ]);
+        RateLimiter::for('partner-apply', fn (Request $r) => [
+            Limit::perMinute(3)->by('papp-m:'.$r->ip())->response($reject('partner-apply')),
+            Limit::perHour(10)->by('papp-h:'.$r->ip())->response($reject('partner-apply')),
+            Limit::perDay(3)->by('papp-email:'.strtolower(trim((string) $r->input('email'))))->response($reject('partner-apply')),
+        ]);
+        RateLimiter::for('referral-consent', fn (Request $r) => Limit::perMinute(20)->by('rc:'.$r->ip())->response($reject('referral-consent')));
         RateLimiter::for('webhooks', fn (Request $r) => Limit::perMinute(600)->by('wh:'.$r->ip()));
         RateLimiter::for('beacon', fn (Request $r) => Limit::perMinute(120)->by('b:'.$r->ip()));
     }

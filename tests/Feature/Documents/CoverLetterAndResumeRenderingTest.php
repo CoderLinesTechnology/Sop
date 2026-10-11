@@ -6,6 +6,7 @@ use App\Domain\Documents\DocumentQa;
 use App\Domain\Documents\Qa\DocxInspector;
 use App\Domain\Documents\RequirementResolver;
 use App\Domain\Documents\TemplateResolver;
+use App\Models\DocumentTemplate;
 use Illuminate\Support\Carbon;
 use Tests\Feature\Documents\Fixtures;
 
@@ -74,7 +75,7 @@ it('resolves and renders a Cover Letter according to formal business cover lette
     expect($qa->passed)->toBeTrue();
 });
 
-it('resolves and renders a Resume / CV according to executive resume design standards', function () {
+it('renders a Resume / CV according to executive resume design standards (the template stays available)', function () {
     $order = Fixtures::order([
         'customer_name' => 'Alex Mercer',
         'applicant_name' => 'Alex Mercer',
@@ -105,7 +106,9 @@ it('resolves and renders a Resume / CV according to executive resume design stan
     ]);
 
     $requirements = app(RequirementResolver::class)->resolve($order);
-    $template = app(TemplateResolver::class)->resolve($order, $requirements);
+    // CVs now default to the Classic Professional CV; the executive layout is chosen explicitly.
+    expect(app(TemplateResolver::class)->resolve($order, $requirements)->slug)->toBe('classic-professional-cv');
+    $template = DocumentTemplate::query()->where('slug', 'executive-resume-cv')->where('is_active', true)->sole();
 
     expect($template->slug)->toBe('executive-resume-cv')
         ->and($template->font_family)->toBe('Calibri')

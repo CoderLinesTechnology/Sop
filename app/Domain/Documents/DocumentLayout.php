@@ -12,17 +12,29 @@ use Throwable;
  * files carry exactly the same text, and QA knows exactly what to expect.
  *
  * Items are the visible paragraphs in reading order. Roles: applicant_name,
- * date, title, subtitle (the "front matter") and the model's block types
- * (heading, paragraph, salutation, closing, signature).
+ * contact, date, title, subtitle (the "front matter") and the model's block
+ * types (heading, subheading, paragraph, bullet, salutation, closing,
+ * signature). Consecutive bullet items form one list.
+ *
+ * Templates may style two kinds of item, which then carry "runs" (text with
+ * an optional colour) and keep "text" as exactly what they display: the
+ * contact block (two lines, links in colour; ContactLine::runs()) and CV
+ * entry lines (organisation and dates in colour, "[dates]" after a tab at
+ * the right margin; EntryLine). Capitals (title, name, headings) are a font
+ * effect: the DOCX keeps the text as written, the PDF draws it in capitals
+ * (renderedText()).
  */
 final class DocumentLayout
 {
     public const LETTER_KINDS = ['motivation_letter', 'cover_letter'];
 
-    private const FRONT_MATTER = ['applicant_name', 'date', 'title', 'subtitle'];
+    /** Bullet lists: text starts this far from the margin; the bullet sits in the gap (both renderers). */
+    public const BULLET_INDENT_MM = 6.35;
+
+    private const FRONT_MATTER = ['applicant_name', 'contact', 'sender_address', 'date', 'recipient', 'title', 'subtitle'];
 
     /**
-     * @param  list<array{role:string,text:string}>  $items
+     * @param  list<array{role:string,text:string,runs?:list<array{text:string,color:?string}>,tab?:array{text:string,color:?string}}>  $items
      * @param  list<array{text:string,align:string,page_number:bool}>  $header
      * @param  list<array{text:string,align:string,page_number:bool}>  $footer
      * @param  list<string>  $hidden  model parts this template does not show
@@ -56,6 +68,7 @@ final class DocumentLayout
         // title_template when it built the model, so it is never re-derived here.
         $title = (string) self::clean($model->title);
         $subtitle = self::clean($model->subtitle);
+        $contact = self::clean($model->contact);
         $isLetter = self::isLetter($model, (string) $context['document_kind']);
         $date = self::formatDate($model->date, $s['date_format'] ?: LanguageVariant::dateFormat($model->languageVariant));
         $position = $s['applicant_name_position'];
@@ -69,11 +82,19 @@ final class DocumentLayout
             }
         };
 
+        // The contact line sits right under the name; when the name is not in the body
+        // (page header, or shown through the title), it follows the title area.
+        $nameInBody = $name !== null && in_array($position, ['above_title', 'below_title'], true);
+
         if ($position === 'above_title') {
             $push('applicant_name', $name);
+            $push('contact', $nameInBody ? $contact : null);
         }
+        // A letter: the applicant's address, the date, then the recipient's address above "Dear …".
         if ($isLetter) {
+            $push('sender_address', self::clean($model->address));
             $push('date', $date);
+            $push('recipient', self::clean($model->recipient));
         }
         if ($showTitle) {
             $push('title', $title);
@@ -83,6 +104,10 @@ final class DocumentLayout
         }
         if ($position === 'below_title') {
             $push('applicant_name', $name);
+            $push('contact', $nameInBody ? $contact : null);
+        }
+        if (! $nameInBody) {
+            $push('contact', $contact);
         }
         if (! $isLetter) {
             $push('date', $date);
@@ -93,6 +118,7 @@ final class DocumentLayout
         foreach ($model->blocks as $block) {
             $push($block['type'], $block['text']);
         }
+        $items = array_map(fn (array $item) => self::styled($item, $s), $items);
 
         return new self(
             items: $items,
@@ -124,10 +150,57 @@ final class DocumentLayout
     }
 
     /**
+     * The body as drawn on the page: text() with capitals applied where the
+     * template asks for them (the PDF's text; the DOCX keeps the written case
+     * and shows capitals through its font settings).
+     */
+    public function renderedText(): string
+    {
+        return implode("\n\n", array_map(fn (int $index) => $this->drawnText($index), array_keys($this->items)));
+    }
+
+    /** An item's text as drawn on the page (in capitals when its format asks for them). */
+    public function drawnText(int $index): string
+    {
+        $text = $this->items[$index]['text'];
+
+        return $this->format($index)['caps'] ? mb_strtoupper($text) : $text;
+    }
+
+    /** Whether any item has this role (e.g. "bullet"). */
+    public function has(string $role): bool
+    {
+        return in_array($role, array_column($this->items, 'role'), true);
+    }
+
+    /** Whether the item starts a list (a bullet not preceded by another bullet). */
+    public function startsList(int $index): bool
+    {
+        return ($this->items[$index]['role'] ?? null) === 'bullet' && ($this->items[$index - 1]['role'] ?? null) !== 'bullet';
+    }
+
+    /** Whether the item ends a list (a bullet not followed by another bullet). */
+    public function endsList(int $index): bool
+    {
+        return ($this->items[$index]['role'] ?? null) === 'bullet' && ($this->items[$index + 1]['role'] ?? null) !== 'bullet';
+    }
+
+    /** Entry lines (subheadings): bold, one point smaller than headings but never smaller than the body. */
+    public function subheadingSize(): float
+    {
+        $heading = (float) $this->snapshot['heading_font_size'];
+
+        return min($heading, max((float) $this->snapshot['font_size'], $heading - 1.0));
+    }
+
+    /**
      * Paragraph formatting for an item, shared by both renderers so the PDF
      * and DOCX are spaced identically. Sizes in points, indent in mm.
      *
-     * @return array{size:float,bold:bool,italic:bool,align:string,line:float,before:float,after:float,indent_mm:float,keep_next:bool}
+     * "rule": a thin line under the paragraph (section headings of CVs), in "rule_color".
+     * "color": the text colour (#RRGGBB), null for the default black; "caps": drawn in capitals.
+     *
+     * @return array{size:float,bold:bool,italic:bool,align:string,line:float,before:float,after:float,indent_mm:float,keep_next:bool,rule:bool,rule_color:string,color:?string,caps:bool}
      */
     public function format(int $index): array
     {
@@ -151,9 +224,12 @@ final class DocumentLayout
         $paragraphGap = (float) $s['paragraph_spacing_pt'];
         $frontAlign = $this->isLetter ? 'left' : $s['title_align'];
 
+        $previous = $this->items[$index - 1]['role'] ?? null;
+
         $format = [
             'size' => $body, 'bold' => false, 'italic' => false, 'align' => 'left', 'line' => (float) $s['line_spacing'],
-            'before' => 0.0, 'after' => $paragraphGap, 'indent_mm' => 0.0, 'keep_next' => false,
+            'before' => 0.0, 'after' => $paragraphGap, 'indent_mm' => 0.0, 'keep_next' => false, 'rule' => false,
+            'rule_color' => $s['heading_rule_color'] ?? '#000000', 'color' => null, 'caps' => false,
         ];
 
         if (in_array($role, self::FRONT_MATTER, true)) {
@@ -172,6 +248,12 @@ final class DocumentLayout
             if ($role === 'subtitle') {
                 $format['italic'] = true;
             }
+            // A letter's address blocks and its date are separated like paragraphs.
+            if ($this->isLetter && in_array($role, ['sender_address', 'date', 'recipient'], true) && in_array($next, self::FRONT_MATTER, true)) {
+                $format['after'] = max(4.0, $paragraphGap);
+            }
+            // The name in capitals, whether it is the title (CVs) or its own line.
+            $format['caps'] = in_array($role, ['title', 'applicant_name'], true) && $s['title_uppercase'];
 
             return $format;
         }
@@ -180,11 +262,23 @@ final class DocumentLayout
             'heading' => array_merge($format, [
                 'size' => (float) $s['heading_font_size'], 'bold' => true, 'line' => 1.0,
                 'before' => $index > 0 && ! in_array($this->items[$index - 1]['role'], self::FRONT_MATTER, true) ? 6.0 : 0.0,
-                'after' => 4.0, 'keep_next' => true,
+                'after' => 4.0, 'keep_next' => true, 'rule' => (bool) $s['heading_rule'],
+                'color' => $s['heading_color'], 'caps' => $s['heading_uppercase'],
+            ]),
+            // "Job Title | Organisation | Dates": kept with the bullets that follow it.
+            'subheading' => array_merge($format, [
+                'size' => $this->subheadingSize(), 'bold' => true, 'line' => 1.0,
+                'before' => $previous === null || $previous === 'heading' || in_array($previous, self::FRONT_MATTER, true) ? 0.0 : 4.0,
+                'after' => 2.0, 'keep_next' => true,
             ]),
             'paragraph' => array_merge($format, [
                 'align' => $s['text_align'],
                 'indent_mm' => (float) $s['first_line_indent_mm'],
+            ]),
+            // List items sit close together; the list as a whole is spaced like a paragraph.
+            'bullet' => array_merge($format, [
+                'align' => $s['bullet_align'] ?? $s['text_align'],
+                'after' => $next === 'bullet' ? min(2.0, $paragraphGap) : $paragraphGap,
             ]),
             'salutation' => array_merge($format, ['keep_next' => true]),
             'closing' => array_merge($format, ['after' => max($paragraphGap, 24.0), 'keep_next' => true]),
@@ -312,6 +406,40 @@ final class DocumentLayout
             str_ends_with($position, '_right') => 'right',
             default => 'center',
         };
+    }
+
+    /**
+     * The contact block and entry lines as the template styles them (other items unchanged).
+     *
+     * @param  array{role:string,text:string}  $item
+     */
+    private static function styled(array $item, array $s): array
+    {
+        if ($item['role'] === 'contact' && ($s['contact_layout'] !== 'single_line' || $s['link_color'] !== null)) {
+            $runs = array_map(
+                fn (array $run) => ['text' => $run['text'], 'color' => $run['link'] ? $s['link_color'] : null],
+                ContactLine::runs($item['text'], $s['contact_layout']),
+            );
+
+            return ['role' => 'contact', 'text' => implode('', array_column($runs, 'text')), 'runs' => $runs];
+        }
+
+        if ($item['role'] === 'subheading' && $s['entry_line_style']) {
+            $entry = EntryLine::parse($item['text']);
+            $runs = [['text' => $entry['role'], 'color' => null]];
+            if ($entry['organisation'] !== null) {
+                $runs[] = ['text' => ' | '.$entry['organisation'], 'color' => $s['entry_detail_color']];
+            }
+            $styled = ['role' => 'subheading', 'text' => EntryLine::display($entry), 'runs' => $runs];
+            if ($entry['dates'] !== null) {
+                // Right-aligned after a tab (DOCX) or in a right-hand cell (PDF).
+                $styled['tab'] = ['text' => '['.$entry['dates'].']', 'color' => $s['entry_detail_color']];
+            }
+
+            return $styled;
+        }
+
+        return $item;
     }
 
     /** ISO dates ("2026-10-06") are formatted with the template/variant format; anything else is shown as written. */

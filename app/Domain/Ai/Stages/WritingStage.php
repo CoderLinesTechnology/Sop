@@ -8,22 +8,29 @@ use App\Domain\Ai\Llm\LlmResult;
 use App\Domain\Ai\Pipeline\StageContext;
 use App\Domain\Ai\Pipeline\StageFailure;
 use App\Domain\Ai\Pipeline\StageResult;
+use App\Domain\Ai\Writing\AnswerCopyCheck;
 use App\Domain\Ai\Writing\DraftConverter;
+use App\Domain\Ai\Writing\StyleLinter;
+use App\Domain\Documents\DocumentModel;
 use App\Enums\PipelineStage;
 
 /**
  * Produces document text in one of three modes:
  *  - initial:    write the draft from the strategy (order pipelines);
  *  - refinement: the quality review asked for a rewrite — apply its
- *                instructions, then go straight back to fact_check;
+ *                instructions, then fact_check (via editorial only when the
+ *                style checks still find problems);
  *  - revision:   revision jobs — apply the customer's revision request to the
- *                delivered document.
+ *                delivered document (same conditional editorial pass).
  */
 class WritingStage implements Stage
 {
     private const MIN_WORDS = 40;
 
-    public function __construct(private readonly LlmGateway $llm) {}
+    public function __construct(
+        private readonly LlmGateway $llm,
+        private readonly StyleLinter $linter,
+    ) {}
 
     public function run(StageContext $ctx): StageResult
     {
@@ -67,8 +74,11 @@ class WritingStage implements Stage
             writingSamples: PromptInputs::writingSamples($ctx),
         ));
 
-        // A refined draft is fact-checked and reviewed again (editorial is not repeated).
-        return StageResult::completed($this->output($ctx, $result, 'refinement') + ['round' => $review['round'] ?? null], PipelineStage::FactCheck);
+        // A refined draft is fact-checked and reviewed again. It gets another editorial pass only when the
+        // free style checks still find real problems (long or uniform sentences, stiff wording...).
+        $output = $this->output($ctx, $result, 'refinement') + ['round' => $review['round'] ?? null];
+
+        return StageResult::completed($output, $this->needsEdit($ctx, $output) ? PipelineStage::Editorial : PipelineStage::FactCheck);
     }
 
     private function revise(StageContext $ctx): StageResult
@@ -87,7 +97,24 @@ class WritingStage implements Stage
             writingSamples: PromptInputs::writingSamples($ctx),
         ));
 
-        return StageResult::completed($this->output($ctx, $result, 'revision') + ['revision_number' => $revision->number]);
+        $output = $this->output($ctx, $result, 'revision') + ['revision_number' => $revision->number];
+
+        return StageResult::completed($output, $this->needsEdit($ctx, $output) ? PipelineStage::Editorial : PipelineStage::FactCheck);
+    }
+
+    /**
+     * Whether a rewritten draft still has real style problems (long or uniform sentences, stiff
+     * wording, banned phrases...) for the editorial pass to fix; otherwise that model call is skipped.
+     */
+    private function needsEdit(StageContext $ctx, array $output): bool
+    {
+        $draft = DocumentModel::fromArray($output['document']);
+        $findings = [
+            ...$this->linter->lint($draft, $ctx->bannedPhrases(), $ctx->languageVariant(), array_filter([$ctx->order->institution, $ctx->order->programme]), $ctx->documentKind()),
+            ...app(AnswerCopyCheck::class)->find($draft, array_column($ctx->answers(), 'answer')),
+        ];
+
+        return StyleLinter::needsEditorialPass($findings);
     }
 
     private function output(StageContext $ctx, LlmResult $result, string $mode): array

@@ -42,7 +42,7 @@ final class PromptInputs
         $r = $ctx->requirements();
 
         return array_filter([
-            'limits' => $r->limitsSummary(),
+            'limits' => $ctx->limitsSummary(),
             'min_words' => $r->minWords,
             'max_words' => $r->maxWords,
             'min_characters' => $r->minCharacters,
@@ -92,6 +92,7 @@ final class PromptInputs
             'max_words' => $r->maxWords ? (int) floor($r->maxWords * 0.97) : 0,
             'max_characters' => $r->maxCharacters ? (int) floor($r->maxCharacters * 0.97) : 0,
             'letter' => $ctx->isLetter(),
+            'resume' => $ctx->isResume(),
             'applicant_name' => $ctx->applicantName(),
             'language_variant' => $ctx->languageVariant(),
             'sections' => $r->requiredSections,

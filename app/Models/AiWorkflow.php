@@ -82,9 +82,14 @@ class AiWorkflow extends Model
                 'verify_quotes' => true,
             ],
             'quality' => [
-                'threshold' => 8.0,
+                'threshold' => 8.1,
                 'min_category_score' => 6.5,
                 'max_refinement_rounds' => 2,
+                // After the rounds, the best draft is delivered unless it falls below these floors.
+                'auto_deliver' => true,
+                'delivery_floor' => 7.0,
+                'delivery_min_category' => 5.0,
+                'delivery_min_factual_accuracy' => 8.0,
             ],
             'limits' => [
                 'max_cost_usd' => 4.00,

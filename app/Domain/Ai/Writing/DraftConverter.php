@@ -17,6 +17,15 @@ final class DraftConverter
             $type = (string) ($block['type'] ?? 'paragraph');
             $text = self::stripMarkdown((string) ($block['text'] ?? ''));
 
+            // Several list items written inside one bullet block become one bullet per line.
+            if ($type === 'bullet') {
+                foreach (preg_split('/\n+/', $text) ?: [] as $line) {
+                    $blocks[] = ['type' => 'bullet', 'text' => $line];
+                }
+
+                continue;
+            }
+
             // Paragraph blocks must not smuggle in several paragraphs.
             if ($type === 'paragraph' && str_contains($text, "\n\n")) {
                 foreach (preg_split("/\n{2,}/", $text) ?: [] as $part) {

@@ -59,6 +59,15 @@ final class WorkflowConfigForm
                                 ->helperText('How many times a document below the threshold is sent back for refinement.'),
                         ])
                         ->columns(3),
+                    Section::make('After the refinement rounds')
+                        ->description('A document still below the threshold is delivered in its best-scoring version. Only a version that fails one of these safety floors, or does not answer the prompt, goes to manual review.')
+                        ->schema([
+                            Toggle::make('config.quality.auto_deliver')->label('Deliver the best version automatically')->default(true)->columnSpanFull(),
+                            TextInput::make('config.quality.delivery_floor')->label('Lowest overall score to deliver')->numeric()->minValue(0)->maxValue(10)->step(0.1)->default(7.0)->required()->suffix('/ 10'),
+                            TextInput::make('config.quality.delivery_min_category')->label('Lowest score in any category')->numeric()->minValue(0)->maxValue(10)->step(0.1)->default(5.0)->required()->suffix('/ 10'),
+                            TextInput::make('config.quality.delivery_min_factual_accuracy')->label('Lowest factual accuracy')->numeric()->minValue(0)->maxValue(10)->step(0.1)->default(8.0)->required()->suffix('/ 10'),
+                        ])
+                        ->columns(3),
                     Section::make('Writing samples')
                         ->description('Example documents from AI → Writing samples that the planning, writing and editing stages study for structure, tone and specificity. Wording copied from a sample is removed by the factual review.')
                         ->schema([

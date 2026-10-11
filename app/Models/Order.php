@@ -68,6 +68,7 @@ class Order extends Model
             'revision_deadline_at' => 'datetime',
             'retention_until' => 'datetime',
             'data_purged_at' => 'datetime',
+            'referred_at' => 'datetime',
         ];
     }
 
@@ -115,6 +116,17 @@ class Order extends Model
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class)->withTrashed();
+    }
+
+    /** The referral partner this order is attributed to (set by App\Domain\Referrals\ReferralAttribution only). */
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(Referrer::class)->withTrashed();
+    }
+
+    public function referralCommissions(): HasMany
+    {
+        return $this->hasMany(ReferralCommission::class);
     }
 
     public function answers(): HasMany

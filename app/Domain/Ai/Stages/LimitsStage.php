@@ -33,9 +33,10 @@ class LimitsStage implements Stage
         $requirements = $ctx->requirements();
         $template = $ctx->template();
         $target = $ctx->targetWords();
+        $band = $ctx->softLengthBand();
         $maxRevisions = max(0, (int) $ctx->config('limits.max_length_revisions', 3));
 
-        $report = $this->lengths->check($draft, $requirements, $template, $target);
+        $report = $this->lengths->check($draft, $requirements, $template, $target, $band);
         $history = [$report['counts']];
         $revisions = 0;
         $evidence = null;
@@ -74,7 +75,7 @@ class LimitsStage implements Stage
             }
 
             $draft = $candidate;
-            $report = $this->lengths->check($draft, $requirements, $template, $target);
+            $report = $this->lengths->check($draft, $requirements, $template, $target, $band);
             $history[] = $report['counts'];
         }
 

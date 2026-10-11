@@ -14,12 +14,22 @@ final class DocumentTemplateData
         'line_spacing', 'paragraph_spacing_pt', 'first_line_indent_mm', 'text_align', 'show_title', 'title_template',
         'title_font_size', 'title_align', 'heading_font_size', 'applicant_name_position', 'header_text', 'footer_text',
         'page_numbers', 'page_number_format', 'date_format', 'citation_style', 'filename_pattern',
-        'include_name_in_filename', 'include_branding',
+        'include_name_in_filename', 'include_branding', 'title_uppercase', 'heading_color', 'heading_uppercase',
+        'heading_rule_color', 'contact_layout', 'link_color', 'entry_line_style', 'entry_detail_color', 'bullet_align',
     ];
 
-    /** match_rules: drop empty criteria, ints for services, upper-case countries, trimmed strings elsewhere. */
+    /** Colour columns, stored as "#RRGGBB" or null (black). */
+    public const COLORS = ['heading_color', 'heading_rule_color', 'link_color', 'entry_detail_color'];
+
+    /** match_rules: drop empty criteria, ints for services, upper-case countries, trimmed strings elsewhere; colours as "#RRGGBB". */
     public static function clean(array $data): array
     {
+        foreach (self::COLORS as $color) {
+            if (array_key_exists($color, $data)) {
+                $data[$color] = filled($data[$color]) ? strtoupper(trim((string) $data[$color])) : null;
+            }
+        }
+
         if (array_key_exists('match_rules', $data)) {
             $rules = [];
             foreach ((array) ($data['match_rules'] ?? []) as $criterion => $values) {

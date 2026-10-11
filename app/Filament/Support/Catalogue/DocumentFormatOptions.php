@@ -38,6 +38,14 @@ final class DocumentFormatOptions
         'top_left' => 'Top, left',
     ];
 
+    /** Same values as App\Domain\Documents\TemplateSnapshot::CONTACT_LAYOUTS. */
+    public const CONTACT_LAYOUTS = [
+        'single_line' => 'One line: email | phone | location | LinkedIn',
+        'two_lines' => 'Two lines: email | Tel: phone | location, then LinkedIn / website',
+    ];
+
+    public const BULLET_ALIGN = ['left' => 'Left (ragged right)', 'justify' => 'Justified'];
+
     public const CITATION_STYLES = ['none' => 'None', 'apa' => 'APA', 'harvard' => 'Harvard', 'mla' => 'MLA', 'chicago' => 'Chicago', 'ieee' => 'IEEE'];
 
     /** PHP date formats with an example. */

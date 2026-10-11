@@ -8,6 +8,7 @@ use App\Filament\Support\Catalogue\IconOptions;
 use App\Models\DocumentTemplate;
 use App\Models\Service;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
@@ -166,6 +167,44 @@ class DocumentTemplateForm
                                 ])
                                 ->columns(3),
                         ]),
+                    Tab::make('Colours & CV layout')
+                        ->icon(Heroicon::OutlinedSwatch)
+                        ->schema([
+                            Section::make('Title and headings')
+                                ->description('Blank colours are black. Keep text colours dark enough to read (a contrast of at least 4.5:1 on white).')
+                                ->schema([
+                                    Toggle::make('title_uppercase')->label('Title and name in capitals')->default(false),
+                                    Toggle::make('heading_uppercase')->label('Section headings in capitals')->default(false),
+                                    self::color('heading_color', 'Section heading colour'),
+                                    self::color('heading_rule_color', 'Rule under CV section headings')
+                                        ->helperText('CVs show a thin rule under each section heading.'),
+                                ])
+                                ->columns(2),
+                            Section::make('CV contact block, entry lines and lists')
+                                ->schema([
+                                    Select::make('contact_layout')
+                                        ->label('Contact details under the name')
+                                        ->options(DocumentFormatOptions::CONTACT_LAYOUTS)
+                                        ->default('single_line')
+                                        ->required()
+                                        ->native(false),
+                                    self::color('link_color', 'Email and link colour')
+                                        ->helperText('Email address, LinkedIn and website in the contact details.'),
+                                    Toggle::make('entry_line_style')
+                                        ->label('Styled entry lines')
+                                        ->helperText('“Role | Organisation | Dates”: the role in bold, the organisation and [dates] in the colour below, the dates at the right margin.')
+                                        ->default(false)
+                                        ->live(),
+                                    self::color('entry_detail_color', 'Organisation and dates colour')
+                                        ->visible(fn (Get $get): bool => (bool) $get('entry_line_style')),
+                                    Select::make('bullet_align')
+                                        ->label('Bullet point alignment')
+                                        ->options(DocumentFormatOptions::BULLET_ALIGN)
+                                        ->placeholder('Same as the body text')
+                                        ->native(false),
+                                ])
+                                ->columns(2),
+                        ]),
                     Tab::make('Header, footer & files')
                         ->icon(Heroicon::OutlinedDocumentText)
                         ->schema([
@@ -209,6 +248,16 @@ class DocumentTemplateForm
                         ]),
                 ]),
         ]);
+    }
+
+    /** A text colour as "#RRGGBB"; blank means black. */
+    private static function color(string $name, string $label): ColorPicker
+    {
+        return ColorPicker::make($name)
+            ->label($label)
+            ->hex()
+            ->regex('/^#[0-9a-fA-F]{6}$/')
+            ->placeholder('Black');
     }
 
     private static function mm(string $name, string $label): TextInput

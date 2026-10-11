@@ -229,7 +229,7 @@ final class Schemas
             'blocks' => self::arr(self::obj([
                 'type' => self::enum(DocumentModel::BLOCK_TYPES),
                 'text' => self::str(),
-            ]), 60),
+            ]), 80), // a long CV: 6+ roles with up to 5 bullets each
             'used_fact_ids' => self::arr(self::str(), 120),
             'used_claim_ids' => self::arr(self::str(), 40),
             'notes' => self::str(),

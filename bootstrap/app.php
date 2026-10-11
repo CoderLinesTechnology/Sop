@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthorizeOrderAccess;
+use App\Http\Middleware\CaptureReferral;
 use App\Http\Middleware\RunHeartbeat;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrackPageView;
@@ -35,6 +36,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // No cron needed: page views drive the maintenance heartbeat (after the response is sent).
         $middleware->appendToGroup('web', RunHeartbeat::class);
+
+        // Referral links (?ref=CODE on any page): remember the code, then redirect to the clean URL.
+        $middleware->appendToGroup('web', CaptureReferral::class);
 
         // Webhooks are authenticated by provider signatures instead of CSRF tokens.
         $middleware->validateCsrfTokens(except: ['webhooks/*', 'beacon']);

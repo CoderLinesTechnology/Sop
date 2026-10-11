@@ -25,6 +25,15 @@ final class DefaultEmailTemplates
             K::MagicLink => 'Your sign-in link',
             K::NewsletterConfirm => 'Please confirm your subscription',
             K::SupportReceived => 'We\'ve received your message',
+            K::PartnerDashboardLink => 'Your {{site_name}} referral dashboard',
+            K::PartnerApplicationConfirm => 'Please confirm your {{site_name}} partner application',
+            K::PartnerApplicationReceived => 'We\'ve received your partner application',
+            K::PartnerApplicationApproved => 'Welcome to the {{site_name}} partner programme',
+            K::PartnerApplicationRejected => 'About your {{site_name}} partner application',
+            K::PartnerPayoutRequested => 'We\'ve received your payout request',
+            K::PartnerPayoutPaid => 'Your payout has been sent',
+            K::PartnerPayoutRejected => 'About your payout request',
+            K::PartnerPaymentDetailsConfirm => 'Please confirm your new payment details',
         };
     }
 
@@ -163,6 +172,105 @@ Hi {{customer_name}},
 Thanks for getting in touch — we've received your message and will reply as soon as possible.
 
 Reference: {{order_id}}
+MD,
+            K::PartnerDashboardLink => <<<'MD'
+Hi {{partner_name}},
+
+Here is your private link to your {{site_name}} referral dashboard. It shows how many people your link brought, the orders they paid for and the commission you have earned.
+
+{{button:dashboard_link|Open your dashboard}}
+
+Your referral code is **{{referral_code}}**. Share this link — whichever page people open, your code stays with them:
+
+{{share_link}}
+
+The dashboard link is personal: anyone who has it can see your referral figures, so please don't share it. If you didn't ask for this email, you can ignore it.
+MD,
+            K::PartnerApplicationConfirm => <<<'MD'
+Hi {{applicant_name}},
+
+Thanks for applying to become a {{site_name}} partner. Please confirm your email address so we can review your application:
+
+{{button:confirm_link|Confirm my application}}
+
+The link works for 48 hours. If you didn't apply, you can ignore this email and nothing will happen.
+MD,
+            K::PartnerApplicationReceived => <<<'MD'
+Hi {{applicant_name}},
+
+Thanks for confirming. Your application to become a {{site_name}} partner is now with our team, and we'll email you once we've reviewed it.
+
+Questions in the meantime? Contact {{support_email}}.
+MD,
+            K::PartnerApplicationApproved => <<<'MD'
+Hi {{partner_name}},
+
+**Welcome — your application has been approved.** Your referral code is **{{referral_code}}** and your commission is **{{commission_rate}}** of what the people you refer pay.
+
+Share this link. Whichever page people open, your code stays with them:
+
+{{share_link}}
+
+Your private dashboard shows your visits, referred orders and commission:
+
+{{button:dashboard_link|Open your dashboard}}
+
+**Before your first payout,** add your mobile money or bank details on the dashboard. We'll email you a link to confirm them, and only confirmed details are used.
+
+The dashboard link is personal, so please don't share it.
+MD,
+            K::PartnerApplicationRejected => <<<'MD'
+Hi {{applicant_name}},
+
+Thank you for your interest in the {{site_name}} partner programme. After reviewing your application, we're not able to accept it at this time.
+
+{{section:rejection_reason|Our note}}
+
+If you have questions, contact {{support_email}}.
+MD,
+            K::PartnerPayoutRequested => <<<'MD'
+Hi {{partner_name}},
+
+We've received your payout request for **{{payout_amount}}**, to be paid to {{payment_method}}. We'll email you again when it has been sent.
+
+{{button:dashboard_link|View your dashboard}}
+
+If you didn't request this payout, please contact {{support_email}} straight away.
+MD,
+            K::PartnerPayoutPaid => <<<'MD'
+Hi {{partner_name}},
+
+**Your payout of {{payout_amount}} has been sent** to {{payment_method}}.
+
+Payment reference: **{{payout_reference}}**
+
+{{button:dashboard_link|View your dashboard}}
+
+Depending on your provider, it can take a little while to appear. Questions? Contact {{support_email}}.
+MD,
+            K::PartnerPayoutRejected => <<<'MD'
+Hi {{partner_name}},
+
+We couldn't pay your payout request for **{{payout_amount}}**, so the amount is back in your available balance.
+
+{{section:rejection_reason|The reason}}
+
+{{button:dashboard_link|View your dashboard}}
+
+If you have questions, contact {{support_email}}.
+MD,
+            K::PartnerPaymentDetailsConfirm => <<<'MD'
+Hi {{partner_name}},
+
+Someone asked to set these payment details for your {{site_name}} partner payouts:
+
+**{{payment_method}}**
+
+They are used only after you confirm them:
+
+{{button:confirm_link|Review and confirm}}
+
+The link works for 48 hours. **If you didn't ask for this, don't confirm.** Your current details stay as they are; please let us know at {{support_email}}.
 MD,
         };
     }

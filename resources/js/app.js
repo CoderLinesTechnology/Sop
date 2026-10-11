@@ -136,7 +136,13 @@ function initAnswerStarters() {
 
         const starter = button.dataset.starter || '';
         const current = field.value.trimEnd();
-        const next = current ? `${current}\n${starter}` : starter;
+        let next = current ? `${current}\n${starter}` : starter;
+
+        // A suggested answer replaces an empty box or the other suggestion; text the customer typed is kept.
+        if (button.dataset.starterMode === 'replace') {
+            const suggestions = Array.from(document.querySelectorAll(`[data-starter-mode="replace"][data-starter-target="${CSS.escape(field.id)}"]`)).map((b) => b.dataset.starter);
+            if (current === '' || suggestions.includes(current)) next = starter;
+        }
         if (field.maxLength > 0 && next.length > field.maxLength) return;
 
         field.value = next;

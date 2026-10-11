@@ -10,19 +10,32 @@ use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
 use PhpOffice\PhpWord\Style\Language;
+use PhpOffice\PhpWord\Style\Tab;
 use RuntimeException;
 use ZipArchive;
 
 /**
  * Renders a DocumentLayout to an editable Word document: real text in
  * paragraphs (no images, text boxes or protection), standard font names,
- * built-in Title / Heading 1 styles, the same spacing as the PDF, header and
- * footer with live PAGE / NUMPAGES fields, and the proofing language set to
- * the document's English variant.
+ * built-in Title / Heading 1 / Heading 2 styles, bullets as a real Word list
+ * (numbering definition, not a typed "•"), the same spacing as the PDF,
+ * header and footer with live PAGE / NUMPAGES fields, and the proofing
+ * language set to the document's English variant.
  */
 final class DocxRenderer
 {
     private const TWIPS_PER_MM = 1440 / 25.4;
+
+    /** Numbering style of bullet items. */
+    private const BULLET_STYLE = 'StatementraBullet';
+
+    /** Bullet position inside the hanging indent: its centre falls where mPDF draws the PDF's bullet. */
+    private const BULLET_HANGING_MM = 3.2;
+
+    /** Stand for a tab and a line break in a run until save() writes them as <w:tab/> and <w:br/> inside the run. */
+    private const TAB_MARK = "\u{E001}";
+
+    private const BREAK_MARK = "\u{E002}";
 
     private const NEUTRAL_APP_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'."\n"
         .'<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" '
@@ -70,11 +83,16 @@ final class DocxRenderer
 
         foreach ($layout->items as $index => $item) {
             $f = $layout->format($index);
-            $run = $section->addTextRun(array_filter([
+            $bullet = $item['role'] === 'bullet';
+            $paragraph = array_filter([
                 'styleName' => match ($item['role']) {
                     'title' => 'Title',
                     'subtitle' => 'Subtitle',
                     'heading' => 'Heading1',
+                    'subheading' => 'Heading2',
+                    'contact' => 'Contact',
+                    'sender_address' => 'SenderAddress',
+                    'recipient' => 'Recipient',
                     default => null,
                 },
                 'alignment' => $this->alignment($f['align']),
@@ -83,16 +101,43 @@ final class DocxRenderer
                 // PHPWord adds the 240 twips of a single line to "auto" spacing itself.
                 'spacing' => (int) round(($f['line'] - 1) * 240),
                 'spacingLineRule' => 'auto',
-                'indentation' => ['firstLine' => (int) round($f['indent_mm'] * self::TWIPS_PER_MM)],
+                'indentation' => $bullet
+                    ? ['left' => $this->twips(DocumentLayout::BULLET_INDENT_MM), 'hanging' => $this->twips(self::BULLET_HANGING_MM)]
+                    : ['firstLine' => (int) round($f['indent_mm'] * self::TWIPS_PER_MM)],
                 'keepNext' => $f['keep_next'],
-                'keepLines' => $item['role'] === 'heading',
-            ], fn ($value) => $value !== null));
+                'keepLines' => in_array($item['role'], ['heading', 'subheading'], true),
+                // Entry lines: the dates sit at a right tab stop on the right margin.
+                'tabs' => isset($item['tab']) ? [new Tab('right', $this->twips($width - $s['margin_left_mm'] - $s['margin_right_mm']))] : null,
+            ], fn ($value) => $value !== null);
 
-            $this->addText($run, $item['text'], [
+            // Consecutive bullet items share one numbering definition: one Word list.
+            $run = $bullet ? $section->addListItemRun(0, self::BULLET_STYLE, $paragraph) : $section->addTextRun($paragraph);
+
+            $font = [
                 'size' => $f['size'],
                 'bold' => $f['bold'],
                 'italic' => $f['italic'],
-            ]);
+            ];
+            if ($f['caps']) {
+                $font['allCaps'] = true; // Word's "All caps": the text itself keeps its case
+            }
+
+            if (! isset($item['runs'])) {
+                $this->addText($run, $item['text'], $font);
+
+                continue;
+            }
+            // Styled items (contact block, entry lines): coloured runs, breaks and tabs inside runs.
+            foreach ($item['runs'] as $part) {
+                foreach (preg_split('/(\n)/', $part['text'], -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) ?: [] as $piece) {
+                    $run->addText($piece === "\n" ? self::BREAK_MARK : $piece, $this->colored($font, $piece === "\n" ? null : $part['color']));
+                }
+            }
+            if (isset($item['tab'])) {
+                $run->addText(self::TAB_MARK, $font);
+                $run->addText($item['tab']['text'], $this->colored($font, $item['tab']['color']));
+            }
+            $marks = true;
         }
 
         if ($layout->header !== []) {
@@ -102,7 +147,7 @@ final class DocxRenderer
             $this->marginal($section->addFooter(), $layout->footer, 'Footer');
         }
 
-        return $this->save($word);
+        return $this->save($word, (bool) $s['heading_rule'], $marks ?? false);
     }
 
     private function defineStyles(PhpWord $word, DocumentLayout $layout): void
@@ -110,9 +155,44 @@ final class DocxRenderer
         $s = $layout->snapshot;
         $base = ['name' => $s['font_family'], 'color' => '000000'];
 
-        $word->addTitleStyle(0, $base + ['size' => (float) $s['title_font_size'], 'bold' => true], ['alignment' => $this->alignment($s['title_align']), 'keepNext' => true]);
-        $word->addTitleStyle(1, $base + ['size' => (float) $s['heading_font_size'], 'bold' => true], ['keepNext' => true, 'keepLines' => true]);
+        // CVs: a thin rule under each section heading, as a bottom border of the Heading 1 style
+        // (so headings added later in Word get it too).
+        $rule = $s['heading_rule'] ? ['borderBottomSize' => 4, 'borderBottomColor' => self::hex($s['heading_rule_color'] ?? '#000000'), 'borderBottomStyle' => 'single'] : [];
+        // Capitals and colour in the styles too, so headings added later in Word look the same.
+        $titleCaps = $s['title_uppercase'] ? ['allCaps' => true] : [];
+        $heading = ['color' => self::hex($s['heading_color'] ?? '#000000')] + ($s['heading_uppercase'] ? ['allCaps' => true] : []) + $base;
+
+        $word->addTitleStyle(0, $base + ['size' => (float) $s['title_font_size'], 'bold' => true] + $titleCaps, ['alignment' => $this->alignment($s['title_align']), 'keepNext' => true]);
+        $word->addTitleStyle(1, $heading + ['size' => (float) $s['heading_font_size'], 'bold' => true], ['keepNext' => true, 'keepLines' => true] + $rule);
+        if ($layout->has('subheading')) {
+            $word->addTitleStyle(2, $base + ['size' => $layout->subheadingSize(), 'bold' => true], ['keepNext' => true, 'keepLines' => true]);
+        }
+        if ($layout->has('bullet')) {
+            $word->addNumberingStyle(self::BULLET_STYLE, [
+                'type' => 'hybridMultilevel',
+                'levels' => [[
+                    'format' => 'bullet',
+                    'text' => '•',
+                    'alignment' => 'left',
+                    'left' => $this->twips(DocumentLayout::BULLET_INDENT_MM),
+                    'hanging' => $this->twips(self::BULLET_HANGING_MM),
+                    'tabPos' => $this->twips(DocumentLayout::BULLET_INDENT_MM),
+                    'font' => $s['font_family'],
+                    'hint' => 'default',
+                ]],
+            ]);
+        }
         $word->addFontStyle('Subtitle', $base + ['size' => (float) $s['font_size'], 'italic' => true], ['alignment' => $this->alignment($s['title_align']), 'keepNext' => true]);
+        if ($layout->has('contact')) {
+            // Its own style, so an uploaded correction of the file maps the line back (DocxImporter).
+            $word->addFontStyle('Contact', $base + ['size' => (float) $s['font_size']], ['keepNext' => true]);
+        }
+        // A letter's address blocks: their own styles too, for the same reason.
+        foreach (['sender_address' => 'SenderAddress', 'recipient' => 'Recipient'] as $role => $style) {
+            if ($layout->has($role)) {
+                $word->addFontStyle($style, $base + ['size' => (float) $s['font_size']], ['keepNext' => true]);
+            }
+        }
 
         $marginal = $base + ['size' => $layout->marginalFontSize()];
         $word->addFontStyle('Header', $marginal, ['spaceBefore' => 0, 'spaceAfter' => 0]);
@@ -154,6 +234,18 @@ final class DocxRenderer
         }
     }
 
+    /** A run's font with a text colour (#RRGGBB), if any. */
+    private function colored(array $font, ?string $color): array
+    {
+        return $color === null ? $font : $font + ['color' => self::hex($color)];
+    }
+
+    /** "#2F5496" → "2F5496" (OOXML colour values). */
+    private static function hex(string $color): string
+    {
+        return ltrim($color, '#');
+    }
+
     /** Transitional OOXML values, understood by every Word version and LibreOffice. */
     private function alignment(string $align): string
     {
@@ -170,7 +262,11 @@ final class DocxRenderer
         return (int) round((float) $mm * self::TWIPS_PER_MM);
     }
 
-    private function save(PhpWord $word): string
+    /**
+     * @param  bool  $headingRule  give the Heading 1 bottom border a 1 pt gap above it (PHPWord cannot write w:space)
+     * @param  bool  $marks  write the tab and line-break marks of styled items as <w:tab/> and <w:br/>
+     */
+    private function save(PhpWord $word, bool $headingRule = false, bool $marks = false): string
     {
         $directory = storage_path('app/tmp');
         if (! is_dir($directory)) {
@@ -187,6 +283,15 @@ final class DocxRenderer
                 throw new RuntimeException('Generated DOCX could not be reopened.');
             }
             $zip->addFromString('docProps/app.xml', self::NEUTRAL_APP_XML);
+            if ($headingRule) {
+                $styles = (string) $zip->getFromName('word/styles.xml');
+                $zip->addFromString('word/styles.xml', preg_replace('#(<w:pBdr><w:bottom\b(?![^>]*w:space=)[^>]*?)(/?>)#', '$1 w:space="1"$2', $styles) ?? $styles);
+            }
+            if ($marks) {
+                $document = (string) $zip->getFromName('word/document.xml');
+                $document = preg_replace('#<w:t(?:\s[^>]*)?>'.self::TAB_MARK.'</w:t>#u', '<w:tab/>', $document) ?? $document;
+                $zip->addFromString('word/document.xml', preg_replace('#<w:t(?:\s[^>]*)?>'.self::BREAK_MARK.'</w:t>#u', '<w:br/>', $document) ?? $document);
+            }
             $zip->close();
 
             $bytes = (string) file_get_contents($path);

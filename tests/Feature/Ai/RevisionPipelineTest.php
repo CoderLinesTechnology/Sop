@@ -53,8 +53,12 @@ it('revises the delivered document and delivers a new version for the revision',
     expect($job->kind)->toBe(AiJob::KIND_REVISION)
         ->and($job->dedupe_key)->toBe("revision:{$revision->id}")
         ->and($job->status)->toBe(AiJobStatus::Completed)
-        ->and($stages)->toBe(['writing', 'fact_check', 'quality_review', 'limits', 'formatting', 'rendering', 'file_qa', 'delivery'])
+        // The editorial pass runs only when the free style checks still find problems in the revised draft.
+        ->and(array_values(array_diff($stages, ['editorial'])))->toBe(['writing', 'fact_check', 'quality_review', 'limits', 'formatting', 'rendering', 'file_qa', 'delivery'])
+        ->and(count(array_keys($stages, 'editorial')))->toBeLessThanOrEqual(1)
         ->and($job->stageOutput(PipelineStage::Writing)['mode'])->toBe('revision')
+        // Later passes see the customer's revision request, so they cannot undo it.
+        ->and(collect(FakeProvider::calls('quality_review'))->last()->userText())->toContain('coding club in 2022')
         ->and($version->version_number)->toBe(2)
         ->and(end($this->engine['delivered']))->toBe(['order' => $order->id, 'version' => $version->id, 'revision' => $revision->id])
         ->and($order->fresh()->status)->toBe(OrderStatus::Delivered)

@@ -187,6 +187,83 @@ it('refines a weak draft and sends it to manual review when it stays below the b
         ->and($order->statusHistories()->where('from_status', 'QUALITY_REVIEW')->where('to_status', 'WRITING')->exists())->toBeTrue();
 });
 
+/** A quality review with every category at $score (factual accuracy 9), merged with $overrides. */
+function reviewScoring(Closure $default, float $score, array $overrides = []): array
+{
+    $review = $default();
+    $review['scores'] = array_merge(array_map(fn () => $score, $review['scores']), ['factual_accuracy' => 9.0], $overrides['scores'] ?? []);
+    $review['answers_prompt'] = $overrides['answers_prompt'] ?? true;
+    $review['issues'] = [['category' => 'specificity', 'problem' => 'The material holds few concrete details.', 'excerpt' => null, 'severity' => 'medium']];
+
+    return $review;
+}
+
+it('delivers the best-scoring draft when the refinement rounds run out above the safety floors', function () {
+    $this->mock(AdminNotifier::class, fn (MockInterface $mock) => $mock->shouldNotReceive('manualReviewRequired'));
+
+    // Each refinement leaves a marker, so the delivered text shows which draft was chosen.
+    $markers = ['Marker alpha.', 'Marker beta.'];
+    FakeProvider::always('refinement', function (LlmRequest $request, Closure $default) use (&$markers) {
+        $draft = $default();
+        foreach ($draft['blocks'] as $i => $block) {
+            if ($block['type'] === 'paragraph') {
+                $draft['blocks'][$i]['text'] .= ' '.array_shift($markers);
+                break;
+            }
+        }
+
+        return $draft;
+    });
+    // The second review (of the first refinement) scores best (8.01, below the 8.1 bar); the last refinement scores worse.
+    FakeProvider::always('quality_review', fn (LlmRequest $request, Closure $default) => reviewScoring($default, $request->context['round'] === 2 ? 7.9 : 7.4));
+
+    $order = $this->paidOrder();
+    $job = app(PipelineDispatcher::class)->startForOrder($order)->refresh();
+
+    $version = DocumentVersion::query()->where('order_id', $order->id)->sole();
+    $text = json_encode($version->content['blocks']);
+    $review = AiJobStep::query()->where('ai_job_id', $job->id)->where('stage', 'quality_review')->orderByDesc('id')->first()->output;
+
+    expect($job->status)->toBe(AiJobStatus::Completed)
+        ->and(FakeProvider::calls('refinement'))->toHaveCount(2)
+        ->and(QualityReview::query()->where('ai_job_id', $job->id)->pluck('passed')->all())->toBe([false, false, false])
+        ->and($review['delivered_below_bar'])->toBeTrue()
+        ->and($review['delivered_round'])->toBe(2)
+        ->and($text)->toContain('Marker alpha.')->not->toContain('Marker beta.')
+        ->and((float) $version->quality_score)->toBe(8.01)
+        ->and($this->engine['delivered'])->toHaveCount(1)
+        ->and($this->engine['delivered'][0]['version'])->toBe($version->id);
+});
+
+it('keeps a draft that is unsafe to send for manual review after the refinement rounds', function (array $overrides, string $reason) {
+    $this->mock(AdminNotifier::class, fn (MockInterface $mock) => $mock->shouldReceive('manualReviewRequired')->once()->withArgs(fn ($order, $text) => str_contains($text, $reason)));
+    FakeProvider::always('quality_review', fn (LlmRequest $request, Closure $default) => reviewScoring($default, $overrides['score'] ?? 7.9, $overrides));
+
+    $order = $this->paidOrder();
+    $job = app(PipelineDispatcher::class)->startForOrder($order)->refresh();
+
+    expect($job->status)->toBe(AiJobStatus::ManualReview)
+        ->and($job->last_error_code)->toBe('quality_below_threshold')
+        ->and(DocumentVersion::query()->where('order_id', $order->id)->exists())->toBeFalse()
+        ->and($this->engine['delivered'])->toBe([]);
+})->with([
+    'the prompt is not answered' => [['answers_prompt' => false], 'does not fully answer the prompt'],
+    'factual doubts' => [['scores' => ['factual_accuracy' => 7.5]], 'factual accuracy 7.5 below 8.0'],
+    'a very weak category' => [['scores' => ['specificity' => 4.5]], 'very weak: specificity'],
+    'below the delivery floor' => [['score' => 6.5], 'overall 6.75 below the delivery floor 7.00'],
+]);
+
+it('sends a document below the bar to manual review when automatic delivery is switched off', function () {
+    $workflow = AiWorkflow::query()->where('slug', 'standard')->firstOrFail();
+    $workflow->update(['config' => array_replace_recursive((array) $workflow->config, ['quality' => ['auto_deliver' => false]])]);
+    FakeProvider::always('quality_review', fn (LlmRequest $request, Closure $default) => reviewScoring($default, 7.9));
+
+    $job = app(PipelineDispatcher::class)->startForOrder($this->paidOrder())->refresh();
+
+    expect($job->status)->toBe(AiJobStatus::ManualReview)
+        ->and($this->engine['delivered'])->toBe([]);
+});
+
 it('delivers after one successful refinement round', function () {
     FakeProvider::queue('quality_review', function (LlmRequest $request, Closure $default) {
         $review = $default();

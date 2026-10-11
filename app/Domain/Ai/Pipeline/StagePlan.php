@@ -10,13 +10,14 @@ use App\Models\AiJob;
  *
  * Order pipelines and regenerations run every stage (optional stages can be
  * disabled per workflow: stages.{stage}.enabled). Revision jobs start from the
- * delivered document: writing (revision mode) → fact_check → quality_review →
- * limits → formatting → rendering → file_qa → delivery.
+ * delivered document: writing (revision mode) → editorial (only when the style
+ * checks still find problems) → fact_check → quality_review → limits →
+ * formatting → rendering → file_qa → delivery.
  */
 final class StagePlan
 {
     private const REVISION_STAGES = [
-        PipelineStage::Writing, PipelineStage::FactCheck, PipelineStage::QualityReview, PipelineStage::Limits,
+        PipelineStage::Writing, PipelineStage::Editorial, PipelineStage::FactCheck, PipelineStage::QualityReview, PipelineStage::Limits,
         PipelineStage::Formatting, PipelineStage::Rendering, PipelineStage::FileQa, PipelineStage::Delivery,
     ];
 

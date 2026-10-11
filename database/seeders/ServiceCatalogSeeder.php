@@ -208,8 +208,9 @@ class ServiceCatalogSeeder extends Seeder
                 'seo_title' => 'Cover Letter Writing Service — Tailored to Every Role',
                 'seo_description' => 'A professional cover letter researched around the employer and role, highlighting your strongest evidence. PDF + Word delivered by email.',
                 'writing_guidance' => 'Write as a formal letter (salutation, body, closing). Open with a clear, specific connection to the role. Evidence each claim with a concrete achievement or experience. Keep it to one page. Mirror the language of the job description naturally, without keyword-stuffing.',
-                'fields' => [...$this->detailFields(), ...[
+                'fields' => [...$this->detailFields(letter: true), ...[
                     ['key' => 'company', 'label' => 'Company / Organisation', 'type' => 'text', 'section' => 'application', 'requirement' => 'required', 'maps_to' => FieldMapping::Institution->value, 'placeholder' => 'e.g. Google, Deloitte, UNICEF', 'validation' => ['max_length' => 200], 'width' => 'half'],
+                    self::companyAddressField(),
                     ['key' => 'job_title', 'label' => 'Job title / Role', 'type' => 'text', 'section' => 'application', 'requirement' => 'required', 'placeholder' => 'e.g. Marketing Manager, Software Engineer', 'validation' => ['max_length' => 200], 'width' => 'half'],
                     $this->countryField('optional'),
                     $this->deadlineField(),
@@ -240,7 +241,7 @@ class ServiceCatalogSeeder extends Seeder
                 'seo_title' => 'Professional Resume / CV Writing Service',
                 'seo_description' => 'A professionally written resume or CV tailored to your target role, ATS-optimised and formatted. PDF + Word delivered by email.',
                 'writing_guidance' => 'Use reverse-chronological format unless a functional format is clearly better. Lead each role with a strong action verb and quantify results wherever possible. Keep formatting clean and ATS-compatible. Tailor the summary and skills to the target role or industry. Never fabricate or embellish experience.',
-                'fields' => [...$this->detailFields(), ...[
+                'fields' => [...$this->detailFields(cv: true), ...[
                     ['key' => 'target_role', 'label' => 'Target role or job title', 'type' => 'text', 'section' => 'application', 'requirement' => 'recommended', 'placeholder' => 'e.g. Product Manager, Data Analyst', 'validation' => ['max_length' => 200], 'width' => 'half'],
                     ['key' => 'industry', 'label' => 'Target industry', 'type' => 'text', 'section' => 'application', 'requirement' => 'optional', 'placeholder' => 'e.g. Finance, Healthcare, Technology', 'validation' => ['max_length' => 200], 'width' => 'half'],
                     $this->countryField('optional'),
@@ -267,13 +268,43 @@ class ServiceCatalogSeeder extends Seeder
         ];
     }
 
-    private function detailFields(): array
+    /** @param  bool  $cv  the CV form: email and phone are printed on the CV, and location/LinkedIn are asked for */
+    private function detailFields(bool $cv = false, bool $letter = false): array
     {
-        return [
+        $fields = [
             ['key' => 'full_name', 'label' => 'Full name', 'type' => 'text', 'section' => 'details', 'requirement' => 'required', 'maps_to' => FieldMapping::CustomerName->value, 'placeholder' => 'e.g. Daniel Essel', 'help_text' => 'As it should appear on your document.', 'validation' => ['max_length' => 120], 'width' => 'half'],
             ['key' => 'email', 'label' => 'Email address', 'type' => 'email', 'section' => 'details', 'requirement' => 'required', 'maps_to' => FieldMapping::Email->value, 'placeholder' => 'e.g. you@example.com', 'help_text' => 'Your finished document will be sent here.', 'width' => 'half'],
             ['key' => 'phone', 'label' => 'Phone number', 'type' => 'phone', 'section' => 'details', 'requirement' => 'optional', 'maps_to' => FieldMapping::Phone->value, 'placeholder' => 'e.g. 24 123 4567', 'help_text' => 'Only used if we need to reach you about your order.'],
         ];
+
+        if ($letter) {
+            return [...$fields, self::addressField()];
+        }
+
+        if (! $cv) {
+            return $fields;
+        }
+
+        $fields[1]['help_text'] = 'Your finished CV will be sent here. It is also shown in the contact line at the top of your CV.';
+        $fields[2]['help_text'] = 'Shown in the contact line at the top of your CV. Leave it blank to keep it off.';
+
+        return [
+            ...$fields,
+            ['key' => 'city', 'label' => 'City and country you live in', 'type' => 'text', 'section' => 'details', 'requirement' => 'optional', 'placeholder' => 'e.g. Accra, Ghana', 'help_text' => 'Shown in the contact line at the top of your CV.', 'validation' => ['max_length' => 120], 'width' => 'half'],
+            ['key' => 'linkedin', 'label' => 'LinkedIn profile', 'type' => 'url', 'section' => 'details', 'requirement' => 'optional', 'placeholder' => 'e.g. https://www.linkedin.com/in/your-name', 'help_text' => 'Optional. Shown at the top of your CV.', 'width' => 'half'],
+        ];
+    }
+
+    /** The applicant's address, shown at the top of a letter (LetterAddresses). */
+    public static function addressField(): array
+    {
+        return ['key' => 'address', 'label' => 'Your address', 'type' => 'textarea', 'section' => 'details', 'requirement' => 'optional', 'placeholder' => "e.g. P.O. Box 12\nMampong, Ashanti\nGhana", 'help_text' => 'Optional. Shown at the top of your letter. Leave it blank to keep it off.', 'validation' => ['max_length' => 300]];
+    }
+
+    /** The employer's address, shown above "Dear …" in a cover letter (LetterAddresses). */
+    public static function companyAddressField(): array
+    {
+        return ['key' => 'company_address', 'label' => "Company's address", 'type' => 'textarea', 'section' => 'application', 'requirement' => 'optional', 'placeholder' => "e.g. 5 Liberation Road\nAccra\nGhana", 'help_text' => 'Optional. Shown with the company name above "Dear…" in your letter. Leave it blank if you do not have it.', 'validation' => ['max_length' => 300]];
     }
 
     private function applicationFields(bool $scholarship = false): array

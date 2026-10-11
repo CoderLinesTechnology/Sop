@@ -131,17 +131,26 @@ class FakeOutputs
         $question = (string) ($order['essay_question'] ?? '');
 
         $story = array_values(array_filter($facts, fn ($f) => in_array($f['category'] ?? '', ['motivation', 'academic_history', 'work_history', 'project', 'achievement', 'key_experience', 'interest'], true)));
+        // Suggested answers are two complete answers the customer can send as they are (no gaps to fill in),
+        // drafted from what their material says, or clearly general when it says nothing relevant.
+        $known = rtrim((string) ($facts[0]['statement'] ?? ''), '.');
         $missing = [];
         if (count($story) < 2) {
             $missing[] = [
                 'question' => 'Could you briefly describe your academic or work background and what first drew you to this field?',
                 'why' => 'There is not enough about your experience to write an accurate, specific document.',
                 'critical' => true,
-                'suggested_answers' => ['I studied … at …, and what first drew me to this field was …', 'In my work as … I …, which made me want to …'],
+                'suggested_answers' => [
+                    $known !== '' ? Str::ucfirst($known).', and that is what drew me to this field.' : 'My studies and my work so far have been in a related area, and they are what drew me to this field.',
+                    'I have studied and worked in areas close to this subject, and I now want to build deeper, more formal knowledge of it.',
+                ],
             ];
         }
         if (! array_filter($facts, fn ($f) => ($f['category'] ?? '') === 'career_goal')) {
-            $missing[] = ['question' => 'What would you like to do after completing this programme?', 'why' => 'Goals help show programme fit.', 'critical' => false, 'suggested_answers' => ['After the programme, I want to …']];
+            $missing[] = ['question' => 'What would you like to do after completing this programme?', 'why' => 'Goals help show programme fit.', 'critical' => false, 'suggested_answers' => [
+                'After the programme, I want to work in this field and apply what I learn to real problems.',
+                'After the programme, I want to take on more responsibility in my field, using the skills the course gives me.',
+            ]];
         }
 
         preg_match('/(\d[\d,]*)\s*words/i', $question, $words);
@@ -281,6 +290,10 @@ class FakeOutputs
 
     private function writing(array $c): array
     {
+        if (! empty($c['resume'])) {
+            return $this->resume($c);
+        }
+
         $facts = (array) ($c['facts'] ?? []);
         $claims = (array) ($c['claims'] ?? []);
         $order = (array) ($c['order'] ?? []);
@@ -352,6 +365,154 @@ class FakeOutputs
             'used_claim_ids' => $usedClaims,
             'notes' => 'Draft assembled from the applicant\'s own statements and the verified dossier.',
         ];
+    }
+
+    // ----------------------------------------------------------------- resume
+
+    /** "...as a data analyst at Hubtel in Accra from 2021 to 2023" (or "since 2022", "in 2021"). */
+    private const ROLE_PATTERN = '/\bas an? (?<role>[^.,]+?) (?:at|for|with) (?:the )?(?<org>[^.,]+?)(?: in (?!(?:19|20)\d{2})[\p{L} ]+?)? (?:(?:from|between) (?<from>(?:19|20)\d{2}) (?:to|and|until) (?<to>(?:19|20)\d{2}|present|now)|since (?<since>(?:19|20)\d{2})|in (?<year>(?:19|20)\d{2}))/iu';
+
+    /** "...completed a BSc in Computer Science at the University of Ghana in 2021". */
+    private const DEGREE_PATTERN = '/\b(?:completed|earned|obtained|received|hold|graduated with) (?:an? |my )?(?<role>[^.,]+?) (?:at|from) (?:the )?(?<org>[^.,]+?)(?: in (?!(?:19|20)\d{2})[\p{L} ]+?)? (?:(?:from|between) (?<from>(?:19|20)\d{2}) (?:to|and|until) (?<to>(?:19|20)\d{2}|present|now)|since (?<since>(?:19|20)\d{2})|in (?<year>(?:19|20)\d{2}))/iu';
+
+    /** "...attended a seminar on inquiry-based learning by the British Council in 2022". */
+    private const TRAINING_PATTERN = '/\b(?:completed|attended|earned|obtained|took) (?:an? |the )?(?<role>[^.,]*?(?:seminar|workshop|course|training|certificat|conference)[^.,]*?) (?:by|from|with|at) (?:the )?(?<org>[^.,]+?) in (?<year>(?:19|20)\d{2})/iu';
+
+    /** "English (full professional proficiency), Twi (native)". */
+    private const LANGUAGE_PATTERN = '/\b(?<lang>\p{Lu}\p{L}+) \((?<level>[^)]*(?:proficien|native|fluent|first language|mother tongue|basic|intermediate|conversational|working)[^)]*)\)/u';
+
+    /**
+     * A CV in the structure the prompts ask for, built only from the applicant's
+     * facts: Professional Summary; Education (before the experience when it covers
+     * under three years); "Role | Organisation | Dates" entries with verb-led
+     * bullets; Seminars & Professional Development; Core Competencies (" | ");
+     * Technical Skills ("Label: items"); Languages; the fixed References line.
+     */
+    private function resume(array $c): array
+    {
+        $facts = array_values(array_filter((array) ($c['facts'] ?? []), fn ($f) => ($f['source_type'] ?? 'answer') === 'answer'));
+        $used = $roles = $education = $training = $competencies = $tools = $languages = $loose = [];
+
+        foreach ($facts as $fact) {
+            $statement = rtrim(trim((string) $fact['statement']), '.');
+            $category = (string) ($fact['category'] ?? '');
+
+            if ($category === 'academic_history' && ($entry = $this->resumeEntry(self::DEGREE_PATTERN, $statement))) {
+                $education[] = $entry;
+            } elseif ($category === 'skill') {
+                $list = (string) preg_replace(['/^I (?:use|know|work with|am good at|am skilled in|have experience (?:in|with)|can use)\s+/i', '/\s+(?:every day|daily|regularly|at work)$/i'], '', $statement);
+                foreach (preg_split('/\s*,\s*(?:and\s+)?|\s+and\s+/', $list) ?: [] as $item) {
+                    if (($item = trim($item)) === '') {
+                        continue;
+                    }
+                    if (preg_match('/^\p{Lu}/u', $item)) {
+                        $tools[] = $item;
+                    } else {
+                        $competencies[] = Str::title($item);
+                    }
+                }
+            } elseif (in_array($category, ['work_history', 'project', 'achievement'], true)) {
+                if ($entry = $this->resumeEntry(self::ROLE_PATTERN, $statement)) {
+                    $roles[] = $entry;
+                } else {
+                    // Another statement about the work becomes a bullet of the entry before it.
+                    $bullet = Str::ucfirst((string) preg_replace('/^I (?:have |had |also )?/i', '', $statement)).'.';
+                    if ($roles === []) {
+                        $loose[] = $bullet;
+                    } else {
+                        $roles[array_key_last($roles)]['bullets'][] = $bullet;
+                    }
+                }
+            } elseif (preg_match_all(self::LANGUAGE_PATTERN, $statement, $matches, PREG_SET_ORDER)) {
+                foreach ($matches as $m) {
+                    $languages[] = $m['lang'].': '.Str::ucfirst(trim($m['level']));
+                }
+            } elseif ($entry = $this->resumeEntry(self::TRAINING_PATTERN, $statement)) {
+                $training[] = $entry;
+            } else {
+                continue;
+            }
+            $used[] = (string) $fact['id'];
+        }
+
+        if ($roles !== [] && $loose !== []) {
+            $roles[0]['bullets'] = [...$loose, ...$roles[0]['bullets']];
+            $loose = [];
+        }
+        usort($roles, fn (array $a, array $b) => $b['end'] <=> $a['end']); // most recent first
+        $years = array_sum(array_map(fn (array $r) => max(1, $r['end'] - $r['start']), $roles));
+        $tools = array_values(array_unique($tools));
+
+        $summary = implode(' ', array_filter([
+            $roles !== [] ? $roles[0]['role'].' with experience at '.$roles[0]['org'] : null,
+            $education !== [] ? ($roles !== [] ? 'and a ' : 'Holder of a ').$education[0]['role'].' from '.$this->withArticle($education[0]['org']) : null,
+        ]));
+        $summary = trim(($summary !== '' ? $summary.'.' : '').($tools !== [] ? ' Works with '.$this->naturalList($tools).'.' : ''));
+
+        $entries = fn (array $list) => array_merge(...array_map(fn (array $e) => [
+            ['type' => 'subheading', 'text' => $e['role'].' | '.$e['org'].' | '.$e['dates']],
+            ...array_map(fn (string $b) => ['type' => 'bullet', 'text' => $b], $e['bullets']),
+        ], $list));
+        $section = fn (string $heading, array $blocks) => $blocks === [] ? [] : [['type' => 'heading', 'text' => $heading], ...$blocks];
+        $paragraph = fn (string $text) => $text === '' ? [] : [['type' => 'paragraph', 'text' => $text]];
+
+        $educationBlocks = $section('Education', $entries($education));
+        $earlyCareer = $years < 3;
+        $competencyLine = implode(' | ', array_unique($competencies ?: $tools));
+
+        $blocks = [
+            ...$section('Professional Summary', $paragraph($summary)),
+            ...($earlyCareer ? $educationBlocks : []),
+            ...$section('Professional Experience', [...$entries($roles), ...array_map(fn (string $b) => ['type' => 'bullet', 'text' => $b], $loose)]),
+            ...($earlyCareer ? [] : $educationBlocks),
+            ...$section('Seminars & Professional Development', $entries($training)),
+            ...$section('Core Competencies', $paragraph($competencyLine)),
+            ...$section('Technical Skills', $tools !== [] ? [['type' => 'bullet', 'text' => 'Tools: '.implode(', ', $tools)]] : []),
+            ...$section('Languages', array_map(fn (string $l) => ['type' => 'bullet', 'text' => $l], array_values(array_unique($languages)))),
+            ['type' => 'heading', 'text' => 'References'],
+            ['type' => 'paragraph', 'text' => 'Available upon request.'],
+        ];
+
+        return [
+            'title' => null,
+            'blocks' => $blocks,
+            'used_fact_ids' => array_values(array_unique($used)),
+            'used_claim_ids' => [],
+            'notes' => 'CV assembled from the applicant\'s own statements.',
+        ];
+    }
+
+    /** @return array{role:string, org:string, dates:string, start:int, end:int, bullets:list<string>}|null */
+    private function resumeEntry(string $pattern, string $statement): ?array
+    {
+        if (! preg_match($pattern, $statement, $m)) {
+            return null;
+        }
+
+        $current = (int) now()->year;
+        $ongoing = in_array(strtolower((string) ($m['to'] ?? '')), ['present', 'now'], true);
+        [$start, $end, $dates] = match (true) {
+            ($m['from'] ?? '') !== '' => [(int) $m['from'], $ongoing ? $current : (int) $m['to'], $m['from'].' – '.($ongoing ? 'Present' : $m['to'])],
+            ($m['since'] ?? '') !== '' => [(int) $m['since'], $current, $m['since'].' – Present'],
+            default => [(int) $m['year'], (int) $m['year'], (string) $m['year']],
+        };
+        $role = trim($m['role']);
+
+        return [
+            // "data analyst" reads "Data Analyst"; "BSc in Computer Science" keeps its own capitals.
+            'role' => $role === mb_strtolower($role) ? Str::title($role) : Str::ucfirst($role),
+            'org' => trim($m['org']),
+            'dates' => $dates,
+            'start' => $start,
+            'end' => $end,
+            'bullets' => [],
+        ];
+    }
+
+    /** @param list<string> $items "A, B and C" */
+    private function naturalList(array $items): string
+    {
+        return count($items) > 1 ? implode(', ', array_slice($items, 0, -1)).' and '.end($items) : (string) ($items[0] ?? '');
     }
 
     /** Editorial / refinement: remove banned phrases and dash chains, keep everything else. */

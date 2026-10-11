@@ -11,6 +11,8 @@ use App\Domain\Payments\ConfirmationOutcome;
 use App\Domain\Payments\PaymentConfirmationService;
 use App\Domain\Payments\Paystack\PaystackException;
 use App\Domain\Pricing\PriceCalculator;
+use App\Domain\Referrals\ReferralAttribution;
+use App\Domain\Referrals\ReferralProgramme;
 use App\Enums\FieldSection;
 use App\Enums\FieldType;
 use App\Http\Controllers\Controller;
@@ -73,6 +75,7 @@ class CheckoutController extends Controller
             'order' => $order,
             'quote' => $prices->quote($order->service, $coupon, $order->email, $order),
             'coupon' => $coupon,
+            'referral' => $this->referralField($request, $order),
             'countryName' => Countries::name($order->country_code),
             'paymentError' => $request->session()->get('payment_error'),
             'seo' => Seo::make('Secure payment', index: false),
@@ -119,7 +122,7 @@ class CheckoutController extends Controller
         return response()->json($quote->toPublicArray());
     }
 
-    public function pay(Request $request, CheckoutService $checkout, string $reference): Response
+    public function pay(Request $request, CheckoutService $checkout, ReferralAttribution $referrals, string $reference): Response
     {
         $order = $this->draft($request, $reference);
         if ($order instanceof RedirectResponse) {
@@ -129,11 +132,18 @@ class CheckoutController extends Controller
         $data = $request->validate([
             'email' => ['required', 'email:rfc', 'max:190'],
             'coupon' => ['nullable', 'string', 'max:40'],
+            'referral_code' => ['nullable', 'string', 'max:40'],
             'confirm_accuracy' => ['accepted'],
             'create_account' => ['nullable', 'boolean'],
         ], [
             'confirm_accuracy.accepted' => 'Please confirm that the information you provided is accurate.',
+            'referral_code.max' => 'Referral codes are at most 40 characters.',
         ]);
+
+        // Attribution only (the price never depends on it). A typed code overrides the link.
+        if ($referralError = $referrals->atCheckout($order, $data['referral_code'] ?? null, $request)) {
+            return back()->withInput()->withErrors(['referral_code' => $referralError]);
+        }
 
         try {
             $result = $checkout->start($order, $data['email'], $data['coupon'] ?? null, (bool) ($data['create_account'] ?? false), $request);
@@ -212,6 +222,24 @@ class CheckoutController extends Controller
         return redirect()
             ->route('checkout.payment', $order->reference)
             ->with('payment_error', "Your payment wasn't completed. No money was taken — please try again or use another payment method.");
+    }
+
+    /**
+     * The optional "Referred by someone?" box: hidden when the programme is
+     * off, prefilled with the order's referral or the link's code (session first,
+     * then the consented cookie).
+     *
+     * @return array{code:?string, applied:bool}|null
+     */
+    private function referralField(Request $request, Order $order): ?array
+    {
+        if (! ReferralProgramme::enabled()) {
+            return null;
+        }
+
+        $code = $order->referral_code ?? ReferralProgramme::referrerForRequest($request)?->code;
+
+        return ['code' => $code, 'applied' => $code !== null];
     }
 
     /** The draft order for this browser, or a redirect if it is not (or no longer) payable here. */

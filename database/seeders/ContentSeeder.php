@@ -245,6 +245,24 @@ MD,
                 'seo_description' => 'Questions about an order or our services? Contact Statementra support — include your order reference if you have one.',
                 'sections' => ['hero' => ['eyebrow' => 'Support', 'title' => 'How can we help?', 'text' => "Questions about an order or our services? Send us a message — include your order reference if you have one and we'll get back to you as soon as possible."]],
             ],
+            'become-a-partner' => [
+                'title' => 'Become a Partner',
+                'kind' => 'landing',
+                'seo_title' => 'Become a Statementra Partner',
+                'seo_description' => 'Share Statementra with applicants you know and earn commission on what they pay. Apply to join the partner programme.',
+                'sections' => [
+                    'hero' => [
+                        'eyebrow' => 'Partner programme',
+                        'title' => 'Become a Statementra partner',
+                        'text' => 'Know students and graduates applying for university places or scholarships? Share Statementra with them and earn a commission on what they pay.',
+                    ],
+                    'details' => [
+                        ['title' => 'Apply', 'text' => 'Tell us about yourself and how you would share Statementra. Every application is reviewed by our team, and your commission rate is agreed with you when you are approved.'],
+                        ['title' => 'Share your link', 'text' => 'Approved partners get a personal link and code. People you refer can also type your code when they pay.'],
+                        ['title' => 'Track and get paid', 'text' => 'A private dashboard shows your visits, referred orders and commission. Request a payout to mobile money or a bank account once your balance reaches the minimum.'],
+                    ],
+                ],
+            ],
             'privacy-policy' => [
                 'title' => 'Privacy Policy',
                 'kind' => 'legal',

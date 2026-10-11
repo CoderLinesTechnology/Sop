@@ -3,6 +3,7 @@
 namespace App\Domain\Orders;
 
 use App\Domain\Pricing\PriceCalculator;
+use App\Domain\Referrals\ReferralAttribution;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
@@ -23,6 +24,7 @@ class DraftOrderService
     public function __construct(
         private readonly PriceCalculator $prices,
         private readonly OrderStateMachine $states,
+        private readonly ReferralAttribution $referrals,
     ) {}
 
     /**
@@ -98,6 +100,9 @@ class DraftOrderService
 
             $this->syncAnswers($order, $normalized['answers']);
             $this->attachUploads($order, $uploadIds, CheckoutSession::hash($request));
+
+            // A referral link followed earlier attributes the draft (never changes the price; never throws).
+            $this->referrals->fromLink($order, $request);
 
             return $order->refresh();
         });

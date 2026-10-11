@@ -184,7 +184,8 @@ class DocumentQa
                 ? 'Every page carries document text.'
                 : 'Blank page(s): '.implode(', ', array_map(fn ($i) => $i + 1, $blank)).'.');
 
-            $comparison = TextNormalizer::compare(TextNormalizer::compact($layout->text()), implode('', $bodies), 'PDF');
+            // The PDF draws capitals (a template option) as capital letters; the DOCX keeps the written case.
+            $comparison = TextNormalizer::compare(TextNormalizer::compact($layout->renderedText()), implode('', $bodies), 'PDF');
             $add('pdf_text_matches', $comparison['equal'], $comparison['detail']);
         } finally {
             @unlink($temp);
@@ -218,7 +219,7 @@ class DocumentQa
         }
 
         $marginal = implode("\n", array_column([...$layout->header, ...$layout->footer], 'text'));
-        $coverage = FontRegistry::glyphCoverage($layout->text()."\n".$marginal, $layout->snapshot['font_family']);
+        $coverage = FontRegistry::glyphCoverage($layout->renderedText()."\n".$marginal, $layout->snapshot['font_family']);
         $add('pdf_glyphs', $coverage['missing'] === [], match (true) {
             $coverage['missing'] !== [] => 'Characters no embedded font can draw: '.implode(' ', $coverage['missing']).'.',
             $coverage['fallback'] !== [] => 'All characters render; drawn with the fallback font: '.implode(' ', $coverage['fallback']).'.',
@@ -277,13 +278,18 @@ class DocumentQa
         ));
         $comparison = TextNormalizer::compare(TextNormalizer::compact($layout->text()), TextNormalizer::compact(implode("\n", array_column($paragraphs, 'text'))), 'DOCX');
         $structure = count($paragraphs) === count($layout->items);
+        $lists = true;
         foreach ($layout->items as $i => $item) {
             $structure = $structure && TextNormalizer::normalize($paragraphs[$i]['text'] ?? '') === TextNormalizer::normalize($item['text']);
+            // Bullet items must be real Word list paragraphs, and nothing else may be.
+            $lists = $lists && ($paragraphs[$i]['list'] ?? false) === ($item['role'] === 'bullet');
         }
-        $add('docx_text_matches', $comparison['equal'] && $structure, match (true) {
+        $add('docx_text_matches', $comparison['equal'] && $structure && $lists, match (true) {
             ! $comparison['equal'] => $comparison['detail'],
             ! $structure => sprintf('DOCX text matches but its paragraphs differ (%d paragraphs, expected %d).', count($paragraphs), count($layout->items)),
-            default => 'DOCX text matches the approved content exactly, paragraph by paragraph ('.count($paragraphs).' paragraphs).',
+            ! $lists => 'DOCX text matches but its bullet points are not Word list items (or other paragraphs are).',
+            default => 'DOCX text matches the approved content exactly, paragraph by paragraph ('.count($paragraphs).' paragraphs'
+                .($layout->has('bullet') ? ', bullet points as Word list items' : '').').',
         });
 
         $fonts = $this->docxInspector->fonts($opened['parts']);
@@ -336,7 +342,13 @@ class DocumentQa
             @unlink($temp);
         }
 
-        $comparison = TextNormalizer::compare(TextNormalizer::compact($layout->text()), implode('', $this->pageBodies($pages, $layout)), 'DOCX (LibreOffice)');
+        $expected = TextNormalizer::compact($layout->renderedText()); // laid out: "All caps" text shows in capitals
+        $actual = implode('', $this->pageBodies($pages, $layout));
+        if ($layout->has('bullet')) {
+            // LibreOffice draws Word list bullets as text; they are not part of the approved content.
+            [$expected, $actual] = [TextNormalizer::withoutBullets($expected), TextNormalizer::withoutBullets($actual)];
+        }
+        $comparison = TextNormalizer::compare($expected, $actual, 'DOCX (LibreOffice)');
         $add('docx_libreoffice', $comparison['equal'], $comparison['equal']
             ? 'The DOCX opens in LibreOffice and lays out the same text ('.count($pages).' page(s)).'
             : $comparison['detail']);

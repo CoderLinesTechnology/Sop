@@ -12,6 +12,8 @@ use App\Domain\Maintenance\PurgeExpiredOrderData;
 use App\Domain\Payments\Tasks\ProcessPendingPaymentEvents;
 use App\Domain\Payments\Tasks\ReconcilePayments;
 use App\Domain\Payments\Tasks\StartPendingFulfilment;
+use App\Domain\Referrals\Tasks\ReconcileReferralCommissions;
+use App\Domain\Referrals\Tasks\ReferralHousekeeping;
 use App\Domain\Seo\Tasks\SendIndexNowPings;
 
 /*
@@ -150,6 +152,8 @@ return [
             'emails.send-pending' => [60, SendPendingEmails::class],
             'uploads.extract-pending' => [120, ExtractPendingUploads::class],
             'payments.reconcile' => [600, ReconcilePayments::class],
+            'referrals.reconcile' => [3600, ReconcileReferralCommissions::class],
+            'referrals.housekeeping' => [21600, ReferralHousekeeping::class],
             'orders.information-requests' => [900, ProcessInformationRequests::class],
             'orders.prune-drafts' => [3600, PruneAbandonedDrafts::class],
             'orders.purge-expired' => [21600, PurgeExpiredOrderData::class],

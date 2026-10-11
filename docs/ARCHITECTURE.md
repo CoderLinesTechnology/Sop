@@ -36,6 +36,7 @@ Page views / status polling / uptime ping ──► Heartbeat: retries, reconcil
 | `app/Domain/Files` | `UploadService`, `UploadValidator`, `MalwareScanner` (ClamAV), `FileEncryptor` (AES-256-GCM), `FileVault`, `TextExtractor` |
 | `app/Domain/Email` | `TransactionalMailer`, `TemplateRenderer`, `DefaultEmailTemplates`, `OrderEmailVariables` |
 | `app/Domain/Delivery` | `DocumentDelivery` (attach PDF+DOCX, mark DELIVERED / DELIVERY_FAILED) |
+| `app/Domain/Referrals` | Referral programme: `ReferralProgramme` (settings, code lookup), `ReferralAttribution`, `ReferralCommissions` (ledger), `ReferralBalances`, `ReferralPayouts`, `ReferrerPaymentDetails` / `PaymentDetails`, `PartnerApplications`, `PartnerDashboard` (read model), `ReferrerService` (dashboard link, activation, erasure) |
 | `app/Domain/Ai` | AI pipeline: `PipelineDispatcher`, stages, OpenAI client, fake provider, budgets; `Samples/`: admin-uploaded writing samples (import, per-job selection, copy detection) |
 | `app/Domain/Documents` | Requirements & templates, `DocumentModel`, PDF/DOCX renderers, file QA |
 | `app/Domain/Notifications` | `AdminNotifier` (Filament database notifications + email + webhook) |
@@ -79,7 +80,66 @@ Page views / status polling / uptime ping ──► Heartbeat: retries, reconcil
 - AI → Delivery: `DocumentDelivery::deliver(Order, DocumentVersion, ?Revision)`.
 - Writing samples → AI: `WritingSampleSelector::forJob()` picks a job's samples once (stored in `ai_jobs.writing_sample_ids`); strategy, writing, editorial, refinement and revision calls receive them as untrusted data, and `FactCheckStage` removes wording copied from them (`WritingSampleOverlap`). Compliance notes: `docs/compliance/REGISTER.md`.
 - Revisions: `RevisionService::request()` / `begin()` → `PipelineDispatcher::startRevision()`.
+- Payments / refunds → Referrals: `ReferralCommissions::recordForPaymentSafely()` and `reverseForRefundSafely()` (after commit, never throw).
 - Admin overrides: `PipelineDispatcher` (pause/resume/retry/skip/cancel/regenerate), `DocumentAdminOperations`, `DocumentDelivery::resend()`, `RefundService`, `InformationRequestService`, `OrderStateMachine` (force with reason), `OrderAccess::rotate()`.
+
+## Referrals
+
+Referrers (`referrers`, Admin → Pricing → Referrers) share a link or a code and earn an agreed
+commission (`commission_rate_bp`, basis points) on what their referrals pay. A code never changes
+a price: attribution only. Referral codes and coupon codes may not collide (both forms check).
+
+- **Link capture and consent:** `CaptureReferral` (web group, before any controller and so before
+  the SEO slug redirects) sees `?ref=CODE` on a GET page, keeps an active referrer's normalised code
+  in the server-side session for this visit (`referral.code`), counts one visit per browser session
+  and day in `referral_visits` (no visitor data; crawlers and link previews skipped) and
+  302-redirects to the same URL without `ref` (built from the app's root URL, never the Host
+  header). Unknown or inactive codes are ignored silently. The next page shows the
+  `ReferralConsentPrompt` (once per session per code, never with Global Privacy Control): only
+  “Remember” (`POST /referral/consent`) sets the first-party `st_ref` cookie (HttpOnly, Lax, Secure;
+  lifetime `referrals.cookie_days`); “No thanks” keeps the session only. `referrals.enabled`
+  switches capture, attribution and the partner pages off.
+- **Attribution:** `ReferralAttribution` writes `orders.referrer_id / referral_code / referral_source
+  ('link' | 'code') / referred_at` with a compare-and-set that only matches an unpaid, pre-payment
+  order, so it never changes after payment. The link (session first, then the consented cookie)
+  attributes the draft (`DraftOrderService`) and again at pay time if still empty; a code typed on
+  the payment page overrides it (unknown codes are a validation error, rate-limited).
+- **Ledger:** `ReferralCommissions` writes `referral_commissions` after commit:
+  `PaymentConfirmationService` records an entry per confirmed order payment or revision fee
+  (floor(amount × rate_bp / 10 000), rate snapshotted); `RefundService::finalize()` records a negative
+  `refund_reversal` so the referrer keeps floor((paid − refunded) × rate). Unique keys on
+  `(payment_id, kind)` and `(refund_id, kind)` make replays harmless; self-referrals (order email =
+  referrer email) earn nothing. Both calls are wrapped and can never fail or roll back a payment or a
+  refund; the `referrals.reconcile` heartbeat task records anything they missed. Entries are never
+  deleted.
+- **Balances and payouts:** `ReferralBalances` derives pending (earnings younger than
+  `referrals.hold_days`), available (older earnings plus every reversal, unpaid and not reserved),
+  requested and paid from one grouped ledger query. `ReferralPayouts::request()` (the partner's
+  “Request payout”) locks the referrer, links every available entry to a new `referral_payouts` row
+  (`payout_id`) and requires a total ≥ `referrals.minimum_payout` and confirmed payment details;
+  one open request per referrer is enforced by a unique index on a stored generated column. An
+  administrator with `referrals.payouts` marks it paid (entries stamped `paid_at` /
+  `payout_reference`) or rejects it (entries released); the partner can cancel it. A reversal
+  recorded after a request stays outside it and lowers the next balance, which can go negative.
+- **Payment details:** `ReferrerPaymentDetails` stores a change (the first one too) as pending,
+  encrypted, and applies it only when the partner confirms from a single-use 48-hour emailed link
+  (GET shows the change, POST applies it). `PaymentDetails` validates and masks them; payout screens
+  warn when they changed within 14 days of a request, and the full details are revealed only to
+  `referrals.payouts` administrators (audited).
+- **Partner dashboard:** `GET /partner/{token}` (no password; 48-character token, looked up by its
+  SHA-256 hash; token kept encrypted so the admin can copy or email it; 404 when unknown, replaced,
+  disabled or the referrer is inactive; throttled; no-store, noindex, no-referrer) shows counts,
+  balances, payout history and masked payment details only (`PartnerDashboard`, a few aggregate
+  queries); its POST actions (request / cancel payout, change details) are CSRF-protected and
+  rate-limited. `GET/POST /partner` emails the link again (same answer for every address,
+  rate-limited per IP and per email, sent after the response).
+- **Partner applications:** `/become-a-partner` (copy in the CMS page of that slug) takes an
+  application (`partner_applications`, no payment details); it counts once the applicant confirms
+  their email (single-use 48-hour link; GET shows, POST confirms). Admins (Pricing → Partner
+  applications) approve it with a code and a rate (`PartnerApplications::approve()` creates the
+  referrer and emails the share and dashboard links) or reject it. The `referrals.housekeeping`
+  heartbeat task deletes unconfirmed applications after 7 days, rejected ones after
+  `referrals.rejected_application_days`, and expired payment-detail changes.
 
 ## Runtime (no queue worker, no cron)
 
@@ -91,7 +151,7 @@ is `sync` and the codebase contains no queued jobs.
 | --- | --- |
 | Slow work triggered by a request (emails, upload text extraction, webhook processing, admin alerts) | `AfterResponse::run($label, fn () => ...)`: Laravel `defer()` with `ignore_user_abort` and a time limit. PHP-FPM / LiteSpeed release the visitor's connection first. In console and tests it runs at once (after the surrounding transaction commits). |
 | The AI pipeline (minutes of work) | `PipelineDispatcher::kick()` runs stages after the response; when its time budget is spent the worker calls `SelfTrigger::fire('internal.pipeline.continue')`, an HMAC-signed POST to the app itself, so the next stage gets a fresh PHP request. Jobs are claimed with a lease (`ai_jobs.leased_until`), retries wait in `ai_jobs.next_run_at`. The customer's status-page polling calls `kickIfDue()`. With `statementra.runtime.pipeline_driver = process` (hosts that stop web PHP after ~2 minutes, e.g. Hostinger), `PipelineTrigger` instead starts `php artisan statementra:pipeline-run {job}` detached through `BackgroundProcess` (`proc_open`, `setsid`), at most once per job per minute; a second worker finds the job leased and exits. If no process starts, work falls back to the request. |
-| Retries and safety nets (payment events, emails, extraction, reconciliation, stalled pipelines, paid orders not yet started, IndexNow notifications) | Heartbeat tasks |
+| Retries and safety nets (payment events, emails, extraction, reconciliation, stalled pipelines, paid orders not yet started, IndexNow notifications, referral commission entries) | Heartbeat tasks |
 | Housekeeping (draft pruning, information-request reminders/expiry, retention purge, log pruning) | Heartbeat tasks |
 
 **Heartbeat.** `App\Support\Runtime\Heartbeat` runs the tasks listed in

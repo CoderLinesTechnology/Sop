@@ -96,6 +96,26 @@
                     </div>
                 </div>
 
+                {{-- Referral (attribution only: it never changes the price) --}}
+                @if ($referral)
+                    @php($referralValue = old('referral_code', $referral['code']))
+                    <details class="mt-4" @if ($referralValue || $errors->has('referral_code')) open @endif>
+                        <summary class="inline-flex cursor-pointer items-center gap-1.5 text-[0.88rem] font-semibold text-brand-700">
+                            <x-icon name="plus" class="size-4" /> Referred by someone?
+                        </summary>
+                        <div class="mt-3">
+                            <label for="referral_code" class="field-label">Their code <span class="tag-optional">(optional)</span></label>
+                            <input id="referral_code" name="referral_code" type="text" maxlength="40" autocomplete="off" spellcheck="false" value="{{ $referralValue }}"
+                                   class="field-input uppercase" aria-describedby="referral-help" @error('referral_code') aria-invalid="true" @enderror>
+                            @if ($referral['applied'] && ! $errors->has('referral_code'))
+                                <p class="mt-2 inline-flex items-center gap-1.5 text-[0.84rem] font-medium text-mint-ink"><x-icon name="check-circle" class="size-4" /> Applied</p>
+                            @endif
+                            <p id="referral-help" class="field-help">Tells us who recommended us. It doesn’t change your price.</p>
+                            @error('referral_code')<p class="field-error" role="alert">{{ $message }}</p>@enderror
+                        </div>
+                    </details>
+                @endif
+
                 {{-- Payment method --}}
                 <fieldset class="mt-7">
                     <legend class="field-label">Payment method</legend>

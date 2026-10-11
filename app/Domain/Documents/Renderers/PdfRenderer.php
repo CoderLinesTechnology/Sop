@@ -84,9 +84,16 @@ final class PdfRenderer
     {
         $family = $layout->snapshot['font_family'];
         $html = '<html><body style="font-family: '.$fontKey.'; color: #000000;">';
+        // An entry line drawn as a table cannot use page-break-after: it is kept with the start of
+        // what follows (its first bullet or paragraph) in a block that does not break across pages.
+        $group = false;
 
         foreach ($layout->items as $index => $item) {
             $f = $layout->format($index);
+            if ($group && ! in_array($item['role'], ['bullet', 'paragraph'], true)) {
+                $html .= '</div>';
+                $group = false;
+            }
             $style = [
                 'font-family: '.$fontKey,
                 sprintf('font-size: %.2Fpt', $f['size']),
@@ -102,13 +109,57 @@ final class PdfRenderer
             if ($f['keep_next']) {
                 $style[] = 'page-break-after: avoid';
             }
+            if ($f['rule']) {
+                // A thin line under the heading, drawn as the paragraph's bottom border (as in the DOCX).
+                $style[] = 'border-bottom: 0.5pt solid '.$f['rule_color'];
+                $style[] = 'padding-bottom: 1pt';
+            }
+            if ($f['color'] !== null) {
+                $style[] = 'color: '.$f['color'];
+            }
 
             // {PAGENO} cannot be renamed; a word joiner keeps it literal in body text.
-            $text = str_replace('{PAGENO}', '{&#8288;PAGENO}', $this->text($item['text']));
+            $text = str_replace('{PAGENO}', '{&#8288;PAGENO}', isset($item['runs']) ? $this->runs($item['runs']) : $this->text($layout->drawnText($index)));
+
+            if (isset($item['tab'])) {
+                $html .= '<div style="page-break-inside: avoid; margin: 0; padding: 0;">';
+                $html .= $this->entryLine($f, $fontKey, $family, $text, str_replace('{PAGENO}', '{&#8288;PAGENO}', $this->runs([$item['tab']])));
+                $group = true;
+
+                continue;
+            }
+
+            if ($item['role'] === 'bullet') {
+                // Consecutive bullets form one real list; mPDF draws the bullet with a hanging indent.
+                if ($layout->startsList($index)) {
+                    $html .= sprintf('<ul style="list-style-type: disc; margin: 0; padding: 0 0 0 %.2Fmm;">', DocumentLayout::BULLET_INDENT_MM);
+                }
+                $html .= '<li style="'.implode('; ', $style).'">'.$text.'</li>';
+                if ($group) {
+                    // The first bullet closes the kept-together block; the list goes on after it.
+                    $html .= '</ul></div>';
+                    $group = false;
+                    if (! $layout->endsList($index)) {
+                        $html .= sprintf('<ul style="list-style-type: disc; margin: 0; padding: 0 0 0 %.2Fmm;">', DocumentLayout::BULLET_INDENT_MM);
+                    }
+
+                    continue;
+                }
+                if ($layout->endsList($index)) {
+                    $html .= '</ul>';
+                }
+
+                continue;
+            }
+
             $html .= '<p style="'.implode('; ', $style).'">'.$text.'</p>';
+            if ($group) {
+                $html .= '</div>';
+                $group = false;
+            }
         }
 
-        return $html.'</body></html>';
+        return $html.($group ? '</div>' : '').'</body></html>';
     }
 
     /** @param list<array{text:string,align:string,page_number:bool}> $lines */
@@ -127,6 +178,42 @@ final class PdfRenderer
                 '<div style="font-family: %s; font-size: %.2Fpt; line-height: %.3Fpt; text-align: %s; color: #000000; margin: 0; padding: 0;">%s</div>',
                 $fontKey, $size, $lineHeight, $line['align'], $text,
             );
+        }
+
+        return $html;
+    }
+
+    /**
+     * A CV entry line with its dates at the right margin: a one-row table
+     * (mPDF has no tab stops), the dates kept on one line. The text is read
+     * back left cell first, as in the DOCX ("Role | Organisation", tab, "[dates]").
+     */
+    private function entryLine(array $f, string $fontKey, string $family, string $left, string $right): string
+    {
+        $font = implode('; ', [
+            'font-family: '.$fontKey,
+            sprintf('font-size: %.2Fpt', $f['size']),
+            sprintf('line-height: %.3Fpt', $f['size'] * $f['line'] * FontRegistry::lineFactor($family)),
+            'font-weight: '.($f['bold'] ? 'bold' : 'normal'),
+            'font-style: '.($f['italic'] ? 'italic' : 'normal'),
+            'padding: 0',
+            'vertical-align: top',
+        ]);
+
+        // autosize="1": never shrink the text to fit. (mPDF treats any page-break-after on a table,
+        // "avoid" included, as a page break, so unlike the DOCX the line is not kept with the next one.)
+        return sprintf('<table autosize="1" style="width: 100%%; border-collapse: collapse; margin: %.2Fpt 0 %.2Fpt 0; page-break-inside: avoid;">', $f['before'], $f['after'])
+            .'<tr><td style="'.$font.'; text-align: left;">'.$left.'</td>'
+            .'<td style="'.$font.'; text-align: right; white-space: nowrap; padding-left: 6pt;">'.$right.'</td></tr></table>';
+    }
+
+    /** @param list<array{text:string,color:?string}> $runs escaped runs, coloured ones in a span */
+    private function runs(array $runs): string
+    {
+        $html = '';
+        foreach ($runs as $run) {
+            $text = $this->text($run['text']);
+            $html .= $run['color'] !== null ? '<span style="color: '.$run['color'].'">'.$text.'</span>' : $text;
         }
 
         return $html;

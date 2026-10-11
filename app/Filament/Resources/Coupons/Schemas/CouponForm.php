@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Coupons\Schemas;
 
 use App\Filament\Support\Operations\DiscountFields;
 use App\Models\Coupon;
+use App\Models\Referrer;
 use Closure;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -44,6 +45,8 @@ class CouponForm
 
                                     if ($taken) {
                                         $fail('Another coupon (possibly archived) already uses this code.');
+                                    } elseif ($code !== '' && Referrer::withTrashed()->where('code', $code)->exists()) {
+                                        $fail('A referrer already uses this code. Coupon codes must differ from referral codes.');
                                     }
                                 },
                             ])
